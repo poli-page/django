@@ -9,9 +9,13 @@ from pathlib import Path
 
 
 def _load_root_env() -> None:
-    """Load the workspace-root .env if present; never overwrite real env vars."""
-    # Look two levels up: example-app/manage.py -> django/ -> Projects/.env
-    env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+    """Load the repo-root .env if present; never overwrite real env vars.
+
+    Mirrors tests/conftest.py — both load the django/ repo-root .env so test
+    runs and the example app share one source of truth (CLAUDE.md §10.3).
+    """
+    # example-app/manage.py -> example-app/ -> django/.env
+    env_path = Path(__file__).resolve().parent.parent / ".env"
     if not env_path.exists():
         # Fallback: example-app's own .env (template defaults).
         env_path = Path(__file__).resolve().parent / ".env"
