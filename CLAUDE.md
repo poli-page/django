@@ -1,164 +1,171 @@
 # CLAUDE.md
 
-> Instructions for Claude Code agents working in this repository.
+> Instructions for Claude Code agents working in `poli-page/django`.
 
 ## 1. Repo at a glance
 
 | Field        | Value |
 | ------------ | ----- |
 | Repository   | `poli-page/django` |
-| Type         | Framework integration (Django) |
-| Language     | Python |
-| Registry     | PyPI — `poli-page-django` |
-| Depends on   | poli-page (PyPI) |
+| Type         | Framework integration (Django reusable app) |
+| Language     | Python 3.10+ |
+| Django       | 4.2 LTS, 5.0, 5.1, 5.2 LTS |
+| Registry     | PyPI — `django-poli-page` |
+| Depends on   | `poli-page` (PyPI; `^1.0`) |
 | Roadmap slot | P1.3 |
 
-The full roadmap, the public API contract, and the reasoning behind the multi-repo split live in the platform repo (`poli-page/poli-page`) under `docs/onboarding/micka/`. Xavier will share the briefings with you. Read them before starting on a new repo:
+**Source-of-truth docs (read first):**
+- `docs/spec/django-app-specification.md` — full design spec for v0.1.0
+- `docs/plan/2026-05-26-implementation.md` — implementation plan
+- `/Users/mickael/Projects/INTEGRATIONS_PLAN.md` — cross-repo umbrella note, esp. §"Cross-cutting DX patterns"
+- `/Users/mickael/Projects/symfony-bundle/CLAUDE.md` — closest structural model (DI/config tree/AppConfig parallels)
+- `/Users/mickael/Projects/nextjs/CLAUDE.md` §10 — battle-tested cross-cutting gotchas
 
-- `agent-guide.md` — the master version of this file. If you want to update conventions, change it there first; this file is its inlined derivative.
-- `project-briefing.md` — what Poli Page is, develop credentials, expected repo layout.
-- `sdk-specification.md` — the API contract every SDK must implement.
-- `sdk-roadmap.md` — what to build, in which order, why.
+## 2. The app's job
 
----
+This package is a **thin reusable Django app** that wraps the official Poli Page Python SDK (`poli-page` on PyPI, source at `/Users/mickael/Projects/sdk-python/`). It provides:
 
-## 2. Working language
+- A Django app installable via `INSTALLED_APPS = [..., "django_poli_page"]`
+- A `settings.POLI_PAGE` config dict, validated at startup by `AppConfig.ready()`
+- A lazy singleton: `from django_poli_page import client` returns a `SimpleLazyObject` wrapping the SDK's `PoliPage` — initialised on first access, not at import-time
+- `django_poli_page.http` response helpers — `FileResponse` for PDFs, `StreamingHttpResponse` for streamed PDFs, `HttpResponse` for HTML previews, `HttpResponseRedirect` for presigned document URLs
+- Django signals (`poli_page_retry`, `poli_page_error`) bridging the SDK's `on_retry` / `on_error` hooks
+- A management command `python manage.py poli_page_render` for smoke-testing config
+- An example Django project at `example-app/` with an interactive demo dashboard at `/`
+
+**This app does NOT** reimplement HTTP transport, retries, error mapping, idempotency, stream chunking, or anything else the SDK already does. Bug in those areas? Fix it in `sdk-python`, not here.
+
+**This app does NOT** ship: a database model, REST framework integration, a Channels consumer, a generic class-based view, or a templatetag library. See `docs/spec/django-app-specification.md` §1 for the explicit "isn't" list.
+
+## 3. Working language
 
 - **Code, comments, file names, commit messages, PR descriptions, repository documentation**: English.
-- **Day-to-day conversation with Xavier**: French, tutoiement.
-- **Conversation in this Claude Code session**: French is fine for the chat; the artifacts you produce (code, commits, READMEs) stay English.
+- **Day-to-day conversation with Xavier/Mickael**: French, tutoiement.
+- **Conversation in this Claude Code session**: French is fine for the chat; artifacts stay English.
 
----
+## 4. TDD is mandatory
 
-## 3. Test-Driven Development is mandatory
+RED → GREEN → refactor for every change. Tests live in `tests/unit/` (mocked SDK, 95%+ of the suite) and `tests/integration/` (one happy-path test against `api-develop.poli.page`, gated on `POLI_PAGE_API_KEY`).
 
-TDD is the working method, not a "nice to have". The cycle is **RED → GREEN → refactor**:
+### What to test (integration-specific!)
+- **AppConfig validation**: missing `POLI_PAGE` setting → `ImproperlyConfigured`; missing `API_KEY` → `ImproperlyConfigured`; bad-prefix key (no `pp_test_` / `pp_live_`) → `ImproperlyConfigured`; out-of-range `TIMEOUT` / `RETRIES.*` → `ImproperlyConfigured`.
+- **Lazy client**: `from django_poli_page import client; client._setup()` does not run until first attribute access; settings overridden by `@override_settings` are picked up on next access.
+- **Response helpers**: `pdf_response`, `pdf_stream_response`, `preview_response`, `document_redirect_response` each set the right `Content-Type`, RFC 5987 `Content-Disposition`, `Cache-Control`, `X-Content-Type-Options`. ASCII AND non-ASCII filenames both encode correctly.
+- **Management command**: option parsing, JSON data parsing, exit codes for `PoliPageError` families (4xx → 1, 5xx → 2, network → 3). Verified via `call_command(...)` + `StringIO`.
+- **Signals**: when the SDK's `on_retry` callable fires, `poli_page_retry` is sent with the `RetryEvent`. Same for `poli_page_error`.
 
-1. **RED** — write the smallest possible failing test that captures the next bit of behavior.
-2. **GREEN** — write the minimum code to make that test pass. No speculative generality, no extra branches.
-3. **Refactor** — clean up the just-written code (or the call site) while the test stays green.
+### What NOT to test (the SDK already does)
+- HTTP transport behaviour (`httpx` edge cases, connection pooling)
+- Retry policy (backoff, max attempts, `Retry-After`, never-retry-4xx)
+- 4xx / 5xx → `PoliPageError` subclass mapping
+- Idempotency-Key generation
+- Stream chunking correctness
+- API contract drift — the SDK's contract tests own that
 
-Every pull request lands as a sequence of these cycles, never as a "I wrote it all then added tests".
+Re-testing these here doubles maintenance burden. **If you find yourself writing a mock HTTP server with `respx`, stop — you're doing the SDK's job.**
 
-### What to test
+## 5. Robustness over shortcuts
 
-- **Every public method** of the client class.
-- **Every error path** — 4xx mapping, 5xx retry behaviour, network failure, timeout, malformed JSON.
-- **Every retry edge case** — exponential backoff, max attempts, never retrying 4xx, honouring `Retry-After`.
-- **Every input variant** — stored project (`project + template + version`) vs inline HTML (`template`), each rendering endpoint (PDF, preview, thumbnails).
+Mickael's hard rule (validated across symfony-bundle and nextjs sessions): **no hacks to make a test pass or a corner case go away**. Fix root causes. If a workaround is genuinely required (framework bug, SDK quirk), document it inline with a `# Why:` comment naming the constraint.
 
-### What NOT to over-test
+Concretely: **no `# type: ignore`, no `# noqa` to silence warnings, no `pytest.skip` to mask flakes**. The skip we DO allow is `pytest.mark.skipif(os.getenv("POLI_PAGE_API_KEY") is None)` for the gated integration test — that one is by design.
 
-- Don't test the language standard library or the HTTP client library — assume they work.
-- Don't test private helpers in isolation if they're already exercised by a public-method test.
-- Don't write tests that snapshot massive objects when an assertion on the field that matters would be clearer.
+## 6. Code conventions
 
-### Test layout
+- **ruff** for linting AND formatting. Config in `pyproject.toml`, mirrors the SDK's rules: `select = ["E", "F", "W", "I", "B", "UP", "RUF", "SIM", "DJ"]` (the `DJ` ruleset is Django-specific).
+- **mypy strict mode** + `django-stubs`. Configured in `pyproject.toml`.
+- **No commented-out code, no `TODO` without a linked issue, no `print()` in committed code** (use the `poli_page` logger).
+- **Default to no comments.** Add one only when the *why* is non-obvious. Comments restating *what* the code does are noise.
+- **`from __future__ import annotations`** at the top of every module — keeps `django-stubs` happy on `4.2`/`5.0`.
 
-- Tests live in `tests/` (or the language's idiomatic location for this repo — see section 7).
-- One test file per source file, mirroring the structure (`src/client.<ext>` → matching test file).
-- Group integration tests under `tests/integration/` so they're runnable separately from the unit suite.
-- **Unit tests** mock the HTTP transport, assert request shape and response handling. These are 90 %+ of the suite.
-- **Integration tests** hit the real develop API with a `pp_test_*` key from `POLI_PAGE_API_KEY`. Render a known template, verify the PDF is non-empty and `Content-Type: application/pdf`. Keep them few and idempotent.
+## 7. Commits and PRs
 
----
+- **Conventional Commits**: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`.
+- **One concern per PR**, reviewable in under 30 minutes.
+- PR description: what changed, why, how it was tested.
+- CI must be green before merge.
 
-## 4. Robustness over shortcuts
+## 8. CI
 
-Xavier's hard rule: **no hacks to make a test pass or a corner case go away.** If something is broken, fix the underlying cause. If a workaround is genuinely required (a third-party bug, an API quirk), document it inline with a one-line comment starting with `Why:` that explains the constraint — not the symptom.
+Workflow: `.github/workflows/ci.yml`. Matrix: Python `3.10`/`3.11`/`3.12`/`3.13` × Django `4.2`/`5.0`/`5.1`/`5.2`, with `tox-gh-actions` slicing per-Python (avoids a 16-cell grid). Each step auto-skips if the relevant config file is missing (so a freshly scaffolded repo is green from day one). Don't change that behaviour.
 
-Concrete corollaries:
-- Don't catch and swallow errors to silence a test.
-- Don't add test-environment branches in production code.
-- Don't add fallbacks for cases that can't happen — trust internal code and framework guarantees.
-- Validate at boundaries (user input, external APIs), not at every internal layer.
+Local mirror:
+```bash
+uv sync --all-extras
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src tests
+uv run pytest
+```
 
----
+## 9. Unpublished-SDK note (dev-time only)
 
-## 5. Code conventions
+The Python SDK (`poli-page` on PyPI) is **already published**, so for normal dev you just `uv sync` / `pip install -e .[dev]`. When iterating against unreleased SDK changes, install the local checkout in editable mode:
 
-- **Style**: follow the dominant style guide of the language. Pin the formatter and linter major version in the manifest so contributors and CI agree.
-- **No commented-out code.** Delete it; git remembers.
-- **No `TODO` without a linked GitHub issue** — `// TODO(#42): refactor` is fine, `// TODO: refactor` is not.
-- **No debug prints** in committed code.
-- **Default to no comments.** Identifiers and short functions should explain themselves. Add a comment only when the *why* is non-obvious — a hidden constraint, a workaround, a surprising invariant. Comments that just restate what the code already says are noise.
+```bash
+uv pip install -e ../sdk-python    # from inside the django repo's venv
+```
 
----
+The integration's `pyproject.toml` stays clean (`"poli-page>=1.0,<2"`). When the SDK ships a new version, just bump the pin — no source-code changes here.
 
-## 6. Commits and Pull Requests
+## 10. Known gotchas (battle-tested — don't relearn the hard way)
 
-- **Conventional Commits** for every commit:
-  - `feat:` new behaviour visible to users.
-  - `fix:` bug fix (link an issue when it exists).
-  - `docs:` documentation only.
-  - `refactor:` no behaviour change, no test change.
-  - `test:` only adds/changes tests.
-  - `chore:` build, deps, tooling.
-- **One concern per PR.** A reviewer should be able to land it in under 30 minutes.
-- **PR description** includes: what changed, why, how it was tested. Link issues; mention any follow-ups deliberately deferred.
-- **CI must be green** before merge.
+These caught us once in `symfony-bundle` / `nextjs` or surface from Django / pytest-django specifics. Recorded so future agents don't burn a session rediscovering them.
 
----
+### 10.1 Django management commands reserve a fixed set of option names
 
-## 7. Continuous Integration
+`django.core.management.base.BaseCommand` registers these on every command BEFORE `add_arguments()` runs:
 
-The workflow lives at `.github/workflows/ci.yml`. The contract is identical across all 10 SDK repos:
+```
+--verbosity / -v   --settings   --pythonpath   --traceback
+--no-color   --force-color   --skip-checks
+```
 
-- **Triggers**: every `push` (any branch) and every `pull_request` targeting `main`.
-- **Matrix**: Python 3.11 / 3.12 / 3.13.
-- **Jobs**: a single `test` job doing *Install → Lint → Test* in order.
-- **Auto-skip is built in**: each step short-circuits with a friendly message when the relevant manifest, lint config, or test directory does not yet exist. This means a freshly scaffolded repo has a green pipeline from day one, and the pipeline starts running real work as soon as you add the manifest, lint config, and tests.
+Declaring a custom option named `--verbosity` or `-v` silently shadows the built-in and breaks `manage.py help <cmd>`. The symfony-bundle hit the equivalent on Symfony Console (`--version` reserved as `-V`) and had to rename to `--template-version` — same lesson here.
 
-When working in this repo with Claude Code:
-- After adding the manifest (`pyproject.toml`), the install step lights up.
-- After adding a lint config (`ruff (lint + format)`), the lint step lights up.
-- After adding the first test in `tests/`, the test step lights up.
+**Pattern**: prefix option names with the noun they describe (`--template-version`, not `--version`). Audit `add_arguments()` against the list above before adding anything.
 
-If you change the workflow, the change MUST stay compatible with this auto-skip behaviour — never make CI fail because of "missing setup".
+### 10.2 Signal-handler / pytest fixture leak hygiene
 
----
+pytest-django flags global-state leaks between tests. Two specific hazards:
 
-## 8. Per-language specifics for this repo
+1. **`signal.signal(SIGINT, ...)` handlers** — Django's `runserver` and management commands register them. If a test installs one and doesn't restore the previous handler, the next test sees the leak.
+2. **Django signal receivers** — `poli_page_retry.connect(my_listener)` in test setup must be balanced by `disconnect(...)` in teardown, or the receiver leaks into the next test.
 
-- **Test framework**: pytest (with pytest-django)
-- **Lint / format**: ruff (lint + format)
-- **Manifest file**: `pyproject.toml`
-- **Run tests locally**: `pytest`
-- **Run lint locally**: `ruff check . && ruff format --check .`
+**Fix in place**: `tests/conftest.py` ships an autouse `restore_signal_handlers` fixture that snapshots `signal.getsignal(SIGINT)` and Django's `poli_page_retry` / `poli_page_error` receiver lists in setup, then unwinds in teardown. Apply to any test that calls `signal.signal(...)` or `<signal>.connect(...)`.
 
----
+Pattern carried from `symfony-bundle/tests/RestoresGlobalHandlers.php` (PHP equivalent) and `nextjs/tests/setup.ts` (`process.on(...)` equivalent). Documented as cross-cutting in `INTEGRATIONS_PLAN.md` §4.
 
-## 9. End-to-end "ship a feature" walk-through
+**Do NOT** "fix" this by disabling pytest-django's strictness. Same rule as symfony-bundle §10.1 and nextjs §10.1.
 
-This is what a single working day looks like:
+### 10.3 Single root `.env`, no per-app `.env.local`
 
-1. **Pick** the next sliver from `sdk-specification.md` (or the open issue you're assigned to).
-2. **Branch** from `main`: `git switch -c feat/<short-description>`.
-3. **RED**: write one failing test that captures the slice. Run the suite — it fails on this test only.
-4. **GREEN**: write the minimum code to pass. Run the suite — green.
-5. **Refactor**: clean up. Suite stays green.
-6. Repeat 3–5 for the next sliver of behaviour.
-7. **Commit** with a Conventional Commits message.
-8. **Push**. CI runs.
-9. **Open a PR** with a clear description.
-10. **Merge** when green and approved.
+Both the test runner (`tests/conftest.py`) and the example project (`example-app/manage.py`, `example-app/example_project/settings.py`) load the repo-root `.env` via a tiny hand-rolled parser (or `python-dotenv` if already installed), **only when the variable isn't already set in `os.environ`**. Real shell exports always win.
 
-If a step takes more than half a day without a test going green, stop and talk to Xavier — the slice is probably too big.
+**Do NOT** introduce a `.env.local` in `example-app/` or instruct users to `cp .env .env.local`. This was an explicit hard requirement from Mickael during the symfony-bundle session. See `INTEGRATIONS_PLAN.md` §"Cross-cutting DX patterns" §2.
 
----
+### 10.4 The client MUST be lazy
 
-## 10. Adding a new dependency
+`from django_poli_page import client` returns `django.utils.functional.SimpleLazyObject(_build_client)`. Initialising at import-time breaks Django's settings-loading order — `settings.POLI_PAGE` isn't readable yet when `django_poli_page/__init__.py` runs in many contexts (e.g. when imported transitively from `INSTALLED_APPS` resolution).
 
-- Justify it. "We could write this in 20 lines" usually means we should write it in 20 lines.
-- Pin the version (caret OK in Node, exact otherwise unless ecosystem convention says otherwise).
-- Run the test suite before committing the lockfile change.
-- Mention the new dependency and its purpose in the commit message.
+If you find yourself wanting to "eagerly construct the client because lazy is annoying to mock", stop. Read `django-storages`' `S3Boto3Storage` or `sentry-sdk[django]`'s init flow — both lazy for the same reason.
 
----
+### 10.5 Response helpers do NOT auto-catch `PoliPageError`
+
+Django has no global Nest-style `ExceptionFilter` or Next.js route-handler-factory equivalent. The response helpers in `django_poli_page.http` are pure transformations: `(SDK output) → HttpResponse`. They do NOT wrap the SDK call in `try/except`. Users handle exceptions in their views — either with a per-view `try/except PoliPageError`, a project-level `process_exception` middleware, or DRF's exception handler.
+
+This is a **deliberate delta** from `@poli-page/nextjs`'s `createPoliPageRouteHandler()` (which DOES catch and map) and `@poli-page/nestjs`'s exception filter. Django's idiom is "explicit `try/except` in views" — we don't paper over it. Documented in spec §10.
+
+### 10.6 Demo lives in a Django template at `/`, not in `README` curl recipes
+
+The example project's home page (`/`, served by a `demo` view) is a single-page interactive dashboard with one button per SDK feature, inline `<iframe>` PDF previews, JSON pretty-print, and a document-lifecycle state machine in client-side JS. Aesthetic copied from `/Users/mickael/Projects/symfony-bundle/example-app/templates/demo.html`: white surface, brand indigo `#4f5d99`, Manrope display sans + IBM Plex Sans body + JetBrains Mono code.
+
+**Do NOT** replace this with a README listing `curl` commands. Cross-cutting requirement from `INTEGRATIONS_PLAN.md` §"Cross-cutting DX patterns" §1.
 
 ## 11. When stuck
 
-- Re-read `sdk-specification.md` — many "open questions" are already answered there.
-- Compare with the Node SDK reference implementation: `github.com/poli-page/sdk-node` (npm: `@poli-page/sdk`).
-- Ask Xavier early. A two-line message is faster than half a day rebuilding the wrong thing.
-- If a CI failure looks unrelated to your change, look for the same failure on `main` first before assuming you caused it.
+- Re-read `docs/spec/django-app-specification.md` first; most "open questions" are answered there or in §18 "Resolved decisions".
+- Compare with `sdk-python` at `/Users/mickael/Projects/sdk-python/` — public classes, exception hierarchy, `RetryEvent` shape.
+- Compare patterns with `django-storages`, `sentry-sdk[django]`, `django-allauth`, `djangorestframework`, `django-redis` (the app's industry benchmarks).
+- Ask Mickael early. A two-line message is faster than a half-day rebuilding the wrong thing.
+- If a CI failure looks unrelated to your change, check `main` first before assuming you caused it.
