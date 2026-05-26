@@ -1,0 +1,15 @@
+[project]
+name = "django-poli-page-example"
+version = "0.0.0"
+description = "Example Django project demonstrating django-poli-page."
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.0",
+    "django-poli-page",
+    "poli-page>=1.0,<2",
+]
+
+[tool.uv.sources]
+# Path-installs: never published. example-app always installs from local sources.
+django-poli-page = { path = "..", editable = true }
+poli-page = { path = "../../sdk-python", editable = true }

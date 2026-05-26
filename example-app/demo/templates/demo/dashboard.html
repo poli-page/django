@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poli Page · Django demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f8fb;
+    --surface-deep: #eef0f6;
+    --ink: #1a1d2e;
+    --ink-soft: #5e6577;
+    --ink-faint: #9aa0b0;
+    --hairline: #e5e7ef;
+    --brand: #4f5d99;
+    --brand-deep: #3d4a7d;
+    --brand-soft: rgba(79, 93, 153, 0.08);
+    --red: #c8472b;
+    --green: #3d8a3d;
+    --gutter: clamp(1.25rem, 4vw, 4.5rem);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 15px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+  }
+  .page { max-width: 1120px; margin: 0 auto; padding: 4rem var(--gutter) 6rem; }
+  header.mast { text-align: center; margin-bottom: 4.5rem; padding-bottom: 3rem; border-bottom: 1px solid var(--hairline); }
+  .wordmark { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: clamp(2.5rem, 5.5vw, 3.75rem); line-height: 1.05; letter-spacing: -0.025em; }
+  .wordmark .brand { color: var(--brand); }
+  .tagline { font-style: italic; color: var(--ink-soft); margin-top: 0.75rem; }
+  section { padding: 3rem 0; border-top: 1px solid var(--hairline); }
+  section h2 { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: -0.018em; display: flex; align-items: baseline; gap: 0.7rem; }
+  section h2 .label { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 500; color: var(--brand); letter-spacing: 0.08em; text-transform: uppercase; background: var(--brand-soft); padding: 0.25rem 0.55rem; border-radius: 4px; line-height: 1; }
+  section .desc { font-style: italic; color: var(--ink-soft); font-size: 0.98rem; max-width: 64ch; margin: 0.4rem 0 1.5rem; }
+  button.run { font-family: 'JetBrains Mono', monospace; background: var(--brand); color: white; border: none; padding: 0.7rem 1.2rem; font-size: 0.85rem; font-weight: 500; border-radius: 4px; cursor: pointer; letter-spacing: 0.02em; }
+  button.run:hover { background: var(--brand-deep); }
+  button.run:disabled { background: var(--ink-faint); cursor: not-allowed; }
+  .out { margin-top: 1.5rem; background: var(--surface); border: 1px solid var(--hairline); border-radius: 6px; padding: 1rem 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--ink); overflow-x: auto; white-space: pre-wrap; word-break: break-word; min-height: 2.5rem; }
+  .out.error { color: var(--red); background: rgba(200, 71, 43, 0.04); border-color: rgba(200, 71, 43, 0.18); }
+  .out.success { color: var(--green); }
+  iframe.preview { width: 100%; height: 540px; border: 1px solid var(--hairline); border-radius: 6px; margin-top: 1.5rem; background: white; }
+  code.cli { display: block; background: var(--surface-deep); border: 1px solid var(--hairline); border-radius: 4px; padding: 0.85rem 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--brand-deep); overflow-x: auto; }
+  .copy-btn { float: right; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; background: white; border: 1px solid var(--hairline); padding: 0.25rem 0.6rem; border-radius: 3px; cursor: pointer; color: var(--ink-soft); }
+  .copy-btn:hover { color: var(--brand); border-color: var(--brand); }
+  .status-row { display: inline-flex; align-items: center; gap: 0.55rem; margin-top: 1.5rem; padding: 0.4rem 0.85rem; background: var(--brand-soft); border-radius: 100px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--brand-deep); }
+  .status-row .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+  .doc-state { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; padding: 0.25rem 0.6rem; background: var(--surface-deep); border-radius: 3px; color: var(--ink-soft); margin-left: 0.8rem; }
+  .doc-state.has-id { color: var(--green); background: rgba(61, 138, 61, 0.08); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="mast">
+    <div class="wordmark"><span class="brand">Poli Page</span> · Django demo</div>
+    <p class="tagline">Every SDK feature, one button each. Powered by django-poli-page.</p>
+    <div class="status-row"><span class="dot"></span><span>django_poli_page.client → SimpleLazyObject(PoliPage)</span></div>
+  </header>
+
+  <section>
+    <h2><span class="label">step 1</span>render.pdf — bytes</h2>
+    <p class="desc">Fetch the full PDF into memory and stream it back via FileResponse.</p>
+    <button class="run" onclick="runPdf()">Render PDF</button>
+    <iframe class="preview" id="pdfPreview" style="display:none"></iframe>
+  </section>
+
+  <section>
+    <h2><span class="label">step 2</span>render.pdf_stream — chunks</h2>
+    <p class="desc">Stream the PDF chunk-by-chunk via StreamingHttpResponse.</p>
+    <button class="run" onclick="runStream()">Stream PDF</button>
+    <iframe class="preview" id="streamPreview" style="display:none"></iframe>
+  </section>
+
+  <section>
+    <h2><span class="label">step 3</span>render_to_file — disk</h2>
+    <p class="desc">SDK free function writes a PDF straight to a temp path.</p>
+    <button class="run" onclick="runFile()">Write to file</button>
+    <pre class="out" id="fileOut"></pre>
+  </section>
+
+  <section>
+    <h2><span class="label">step 4</span>render.preview — HTML</h2>
+    <p class="desc">Paginated HTML preview, sandboxed in an iframe.</p>
+    <button class="run" onclick="runPreview()">Render preview</button>
+    <iframe class="preview" id="previewFrame" style="display:none" sandbox></iframe>
+  </section>
+
+  <section>
+    <h2><span class="label">step 5</span>render.document — store</h2>
+    <p class="desc">Store the PDF server-side. Returns a descriptor.<span id="docState" class="doc-state">no document</span></p>
+    <button class="run" onclick="runCreateDoc()">Create document</button>
+    <pre class="out" id="createOut"></pre>
+  </section>
+
+  <section>
+    <h2><span class="label">step 6</span>documents.get — redirect</h2>
+    <p class="desc">Fetch a fresh presigned URL and 302 to it.</p>
+    <button class="run" id="getBtn" disabled onclick="runGetDoc()">Get document</button>
+    <pre class="out" id="getOut"></pre>
+  </section>
+
+  <section>
+    <h2><span class="label">step 7</span>documents.thumbnails</h2>
+    <p class="desc">Per-page base64 thumbnails as JSON.</p>
+    <button class="run" id="thumbsBtn" disabled onclick="runThumbs()">Get thumbnails</button>
+    <pre class="out" id="thumbsOut"></pre>
+  </section>
+
+  <section>
+    <h2><span class="label">step 8</span>documents.preview</h2>
+    <p class="desc">HTML preview of the stored document.</p>
+    <button class="run" id="docPreviewBtn" disabled onclick="runDocPreview()">Preview stored doc</button>
+    <iframe class="preview" id="docPreviewFrame" style="display:none" sandbox></iframe>
+  </section>
+
+  <section>
+    <h2><span class="label">step 9</span>documents.delete</h2>
+    <p class="desc">Soft-delete the stored document. 204 No Content.</p>
+    <button class="run" id="deleteBtn" disabled onclick="runDelete()">Delete document</button>
+    <pre class="out" id="deleteOut"></pre>
+  </section>
+
+  <section>
+    <h2><span class="label">step 10</span>error handling</h2>
+    <p class="desc">Deliberately trigger INVALID_VERSION_FORMAT; the view catches PoliPageError and returns JSON.</p>
+    <button class="run" onclick="runErr()">Trigger error</button>
+    <pre class="out" id="errOut"></pre>
+  </section>
+
+  <section>
+    <h2><span class="label">CLI</span>manage.py poli_page_render</h2>
+    <p class="desc">Same render path, exposed as a Django management command.</p>
+    <code class="cli">
+<button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.innerText.replace('Copy',''))">Copy</button>python manage.py poli_page_render \
+  --project=getting-started \
+  --template=welcome \
+  --template-version=1.0.0 \
+  --data='{"name":"CLI"}' \
+  --output=./welcome.pdf
+    </code>
+  </section>
+</div>
+
+<script>
+  let currentDocId = null;
+  function setDocId(id) {
+    currentDocId = id;
+    const state = document.getElementById('docState');
+    state.textContent = id ? 'document_id: ' + id : 'no document';
+    state.classList.toggle('has-id', !!id);
+    ['getBtn', 'thumbsBtn', 'docPreviewBtn', 'deleteBtn'].forEach(b => {
+      document.getElementById(b).disabled = !id;
+    });
+  }
+  function showJson(elId, data, isError) {
+    const el = document.getElementById(elId);
+    el.textContent = JSON.stringify(data, null, 2);
+    el.classList.toggle('error', !!isError);
+  }
+  function runPdf() {
+    const f = document.getElementById('pdfPreview');
+    f.src = '/render/pdf?_=' + Date.now();
+    f.style.display = 'block';
+  }
+  function runStream() {
+    const f = document.getElementById('streamPreview');
+    f.src = '/render/stream?_=' + Date.now();
+    f.style.display = 'block';
+  }
+  async function runFile() {
+    const r = await fetch('/render/file', { method: 'POST' });
+    showJson('fileOut', await r.json(), !r.ok);
+  }
+  function runPreview() {
+    const f = document.getElementById('previewFrame');
+    f.src = '/render/preview?_=' + Date.now();
+    f.style.display = 'block';
+  }
+  async function runCreateDoc() {
+    const r = await fetch('/documents', { method: 'POST' });
+    const data = await r.json();
+    showJson('createOut', data, !r.ok);
+    if (r.ok) setDocId(data.document_id);
+  }
+  async function runGetDoc() {
+    const r = await fetch('/documents/' + currentDocId, { redirect: 'manual' });
+    showJson('getOut', { status: r.status, location: r.headers.get('Location') }, false);
+  }
+  async function runThumbs() {
+    const r = await fetch('/documents/' + currentDocId + '/thumbnails');
+    showJson('thumbsOut', await r.json(), !r.ok);
+  }
+  function runDocPreview() {
+    const f = document.getElementById('docPreviewFrame');
+    f.src = '/documents/' + currentDocId + '/preview?_=' + Date.now();
+    f.style.display = 'block';
+  }
+  async function runDelete() {
+    const r = await fetch('/documents/' + currentDocId, { method: 'DELETE' });
+    showJson('deleteOut', { status: r.status, ok: r.ok }, !r.ok);
+    if (r.ok) setDocId(null);
+  }
+  async function runErr() {
+    const r = await fetch('/errors/bad-version');
+    showJson('errOut', await r.json(), !r.ok);
+  }
+</script>
+</body>
+</html>
