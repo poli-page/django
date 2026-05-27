@@ -43,6 +43,9 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 POLI_PAGE = {
-    "API_KEY": os.environ["POLI_PAGE_API_KEY"],
-    "BASE_URL": "https://api-develop.poli.page",  # remove for production
+    # When POLI_PAGE_API_KEY is unset, this stays None and AppConfig.ready()
+    # defers to the SDK's own env-var fallback (spec §6.2). Better than a raw
+    # KeyError at settings import.
+    "API_KEY": os.environ.get("POLI_PAGE_API_KEY"),
+    "BASE_URL": os.environ.get("POLI_PAGE_BASE_URL", "https://api-develop.poli.page"),
 }

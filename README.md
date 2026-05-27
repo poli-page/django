@@ -8,6 +8,8 @@ Official Django integration for [Poli Page](https://poli.page) — render polish
 
 → API reference (auto-generated from the SDK source): **https://docs.poli.page/reference/sdk/python/**
 
+> **Status:** pre-release. `django-poli-page` and the underlying `poli-page` SDK are not on PyPI yet — install from source (see below) until v0.1.0 ships.
+
 ## Requirements
 
 - Python 3.11+
@@ -15,10 +17,21 @@ Official Django integration for [Poli Page](https://poli.page) — render polish
 
 ## Install
 
+Once published, install from PyPI:
+
 ```bash
 pip install django-poli-page
 # or
 uv add django-poli-page
+```
+
+Until then, install both repos editable from a checkout:
+
+```bash
+git clone git@github.com:poli-page/sdk-python.git
+git clone git@github.com:poli-page/django.git
+cd django
+uv sync               # picks up ../sdk-python via [tool.uv.sources]
 ```
 
 ## Setup (3 lines)
