@@ -5,7 +5,6 @@ Mirrors sdk-python/demo/sync_demo.py 1:1 so a reader can put them side by side.
 
 from __future__ import annotations
 
-import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -53,9 +52,10 @@ def render_stream(request: HttpRequest) -> HttpResponse:
 
 # Step 3: render_to_file
 def render_to_file(request: HttpRequest) -> JsonResponse:
-    tmp = Path(tempfile.mkdtemp()) / "demo.pdf"
-    sdk_render_to_file(client, PROJECT_INPUT, tmp)
-    return JsonResponse({"wrote": str(tmp), "size_bytes": tmp.stat().st_size})
+    output = Path(__file__).resolve().parent.parent / "output" / "welcome.pdf"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    sdk_render_to_file(client, PROJECT_INPUT, output)
+    return JsonResponse({"path": str(output), "size_bytes": output.stat().st_size})
 
 
 # Step 4: render.preview
