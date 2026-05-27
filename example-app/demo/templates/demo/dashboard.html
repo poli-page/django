@@ -102,9 +102,9 @@
 
   <section>
     <h2><span class="label">step 6</span>documents.get — redirect</h2>
-    <p class="desc">Fetch a fresh presigned URL and 302 to it.</p>
+    <p class="desc">Fetch a fresh presigned URL and 302 to it. The iframe follows the redirect to S3 natively.</p>
     <button class="run" id="getBtn" disabled onclick="runGetDoc()">Get document</button>
-    <pre class="out" id="getOut"></pre>
+    <iframe class="preview" id="getFrame" style="display:none"></iframe>
   </section>
 
   <section>
@@ -190,9 +190,15 @@
     showJson('createOut', data, !r.ok);
     if (r.ok) setDocId(data.document_id);
   }
-  async function runGetDoc() {
-    const r = await fetch('/documents/' + currentDocId, { redirect: 'manual' });
-    showJson('getOut', { status: r.status, location: r.headers.get('Location') }, false);
+  function runGetDoc() {
+    // Why: /documents/{id} returns a 302 to a presigned S3 URL. Fetching
+    // and following from JS hits CORS (S3 doesn't send ACAO; fetch sees
+    // an opaque response and refuses to expose the body). <iframe>
+    // navigation isn't a fetch, so the browser follows the redirect
+    // natively and renders the PDF.
+    const f = document.getElementById('getFrame');
+    f.src = '/documents/' + currentDocId + '?_=' + Date.now();
+    f.style.display = 'block';
   }
   async function runThumbs() {
     const r = await fetch('/documents/' + currentDocId + '/thumbnails');
