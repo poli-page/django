@@ -19,6 +19,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
+    "example_project.middleware.PoliPageErrorMiddleware",
 ]
 
 ROOT_URLCONF = "example_project.urls"
