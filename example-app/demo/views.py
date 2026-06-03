@@ -133,14 +133,15 @@ def error_bad_version(request: HttpRequest) -> JsonResponse:
             }
         )
     except PoliPageError as exc:
+        payload = exc.to_payload()
         return JsonResponse(
             {
                 "caught": True,
-                "status": exc.status,
-                "code": exc.code,
-                "message": exc.message,
-                "request_id": exc.request_id,
+                "code": payload["code"],
+                "message": payload["message"],
+                "status": payload["status"],
+                "requestId": payload["request_id"],
             },
-            status=400,
+            status=payload["status"] or 500,
         )
     return JsonResponse({"caught": False, "note": "expected error, got success"}, status=500)
