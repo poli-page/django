@@ -17,7 +17,7 @@ def test_dispatch_retry_sends_signal() -> None:
 
     poli_page_retry.connect(listener)
     try:
-        event = RetryEvent(attempt=2, delay_seconds=0.25, reason=MagicMock(spec_set=Exception))
+        event = RetryEvent(attempt=2, delay_ms=250, reason=MagicMock(spec_set=Exception))
         dispatch_retry(event)
     finally:
         poli_page_retry.disconnect(listener)

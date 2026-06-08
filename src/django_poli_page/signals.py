@@ -9,7 +9,7 @@ poli_page_retry = Signal()
 
 Receivers get:
 - sender: django_poli_page.apps.PoliPageConfig (the class, not instance)
-- event:  poli_page.RetryEvent (with .attempt, .delay_seconds, .reason)
+- event:  poli_page.RetryEvent (with .attempt, .delay_ms, .reason)
 """
 
 poli_page_error = Signal()
