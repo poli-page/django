@@ -140,7 +140,7 @@ def error_bad_version(request: HttpRequest) -> JsonResponse:
                 "code": payload["code"],
                 "message": payload["message"],
                 "status": payload["status"],
-                "requestId": payload["request_id"],
+                "requestId": payload["requestId"],
             },
             status=payload["status"] or 500,
         )

@@ -40,7 +40,7 @@ class PoliPageErrorMiddleware:
                 "code": payload["code"],
                 "message": payload["message"],
                 "status": status,
-                "requestId": payload["request_id"],
+                "requestId": payload["requestId"],
             },
             status=status,
         )
