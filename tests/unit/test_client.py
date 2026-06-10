@@ -31,7 +31,7 @@ def test_build_client_passes_all_options(mocker: Any) -> None:
     with override_settings(
         POLI_PAGE={
             "API_KEY": "pp_test_full",
-            "BASE_URL": "https://api-develop.poli.page",
+            "BASE_URL": "https://api.example.com",
             "TIMEOUT": 42.0,
             "RETRIES": {"MAX_ATTEMPTS": 5, "DELAY_SECONDS": 0.1},
         },
@@ -40,7 +40,7 @@ def test_build_client_passes_all_options(mocker: Any) -> None:
 
     _, kwargs = fake_polipage_cls.call_args
     assert kwargs["api_key"] == "pp_test_full"
-    assert kwargs["base_url"] == "https://api-develop.poli.page"
+    assert kwargs["base_url"] == "https://api.example.com"
     assert kwargs["timeout"] == 42.0
     assert kwargs["max_retries"] == 5
     assert kwargs["retry_delay"] == 0.1

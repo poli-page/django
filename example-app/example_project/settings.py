@@ -48,5 +48,5 @@ POLI_PAGE = {
     # defers to the SDK's own env-var fallback (spec §6.2). Better than a raw
     # KeyError at settings import.
     "API_KEY": os.environ.get("POLI_PAGE_API_KEY"),
-    "BASE_URL": os.environ.get("POLI_PAGE_BASE_URL", "https://api-develop.poli.page"),
+    "BASE_URL": os.environ.get("POLI_PAGE_BASE_URL"),
 }

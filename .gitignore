@@ -40,3 +40,6 @@ bin/
 # Env
 .env
 .env.local
+CLAUDE.md
+docs/plan/
+docs/spec/

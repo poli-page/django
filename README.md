@@ -80,7 +80,7 @@ You configure everything through a single `POLI_PAGE` dict in your settings modu
 | Key | Default | Description |
 |---|---|---|
 | `API_KEY` | — (required) | Your Poli Page key. Must start with `pp_test_` or `pp_live_`. |
-| `BASE_URL` | SDK default | Override the API host (e.g. for `api-develop.poli.page`). |
+| `BASE_URL` | SDK default | Override the API host. |
 | `TIMEOUT` | SDK default | Per-request timeout in seconds (0 < value <= 600). |
 | `RETRIES.MAX_ATTEMPTS` | SDK default | Retry budget for transient failures (0-10). |
 | `RETRIES.DELAY_SECONDS` | SDK default | Base delay between retry attempts (0-30). |

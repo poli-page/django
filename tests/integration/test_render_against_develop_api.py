@@ -25,7 +25,7 @@ def test_render_getting_started_welcome_returns_pdf() -> None:
     with override_settings(
         POLI_PAGE={
             "API_KEY": api_key,
-            "BASE_URL": "https://api-develop.poli.page",
+            "BASE_URL": os.environ.get("POLI_PAGE_TEST_BASE_URL"),
             "TIMEOUT": 30.0,
         },
     ):
