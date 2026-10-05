@@ -7,6 +7,9 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 ### Added
 - Initial release scaffolding.
 
+### Fixed
+- `pdf_response` / `pdf_stream_response`: the `Content-Disposition` filename is now escaped per RFC 6266 / RFC 9110 (`\` and `"` as quoted-pairs, ASCII fallback included) and stripped of control characters (CR/LF, TAB, DEL, C1), so a filename can no longer break the header or inject parameters.
+
 ## [0.1.0] — TBD
 
 ### Added
