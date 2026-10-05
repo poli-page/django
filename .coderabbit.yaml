@@ -61,7 +61,7 @@ reviews:
   path_instructions:
     - path: "src/django_poli_page/**"
       instructions: |
-        Reusable Django app wrapping the poli-page Python SDK. Keep the public surface (client singleton, http response helpers, signals, POLI_PAGE settings keys) consistent with the other poli-page SDKs and the API spec (errors are `{ error: { code } }`). No breaking changes without a major version bump. Settings are validated in AppConfig.ready(); keep Django 4.2-5.2 and Python 3.11+ compatibility and full type hints (mypy strict, py.typed).
+        Reusable Django app wrapping the poli-page Python SDK. Keep the public surface (client singleton, http response helpers, signals, POLI_PAGE settings keys) consistent with the other poli-page SDKs and the API spec (errors are `{ error: CODE_STRING, detail?, issues? } (flat, API spec §4.1)`). No breaking changes without a major version bump. Settings are validated in AppConfig.ready(); keep Django 4.2-5.2 and Python 3.11+ compatibility and full type hints (mypy strict, py.typed).
     - path: "src/django_poli_page/http.py"
       instructions: |
         Response helpers must set correct Content-Type, Content-Disposition and Cache-Control, and must not leak API keys or presigned URLs into logs. Sanitize filenames used in headers.
