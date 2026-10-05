@@ -7,6 +7,7 @@ for the rationale (delta from nextjs/nestjs).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Iterator
 from urllib.parse import quote
 
@@ -68,13 +69,29 @@ def document_redirect_response(
     return response
 
 
+# C0 controls (incl. TAB, CR, LF), DEL and C1 controls. None of them belong in a
+# filename, and CR/LF would split the header (response splitting).
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+
+
 def _build_disposition(filename: str, as_attachment: bool) -> str:
+    """Build a Content-Disposition value per RFC 6266 / RFC 8187 (ex-5987).
+
+    ASCII filenames use a quoted-string ``filename="..."``. Non-ASCII filenames use
+    the dual notation: an ASCII ``filename="..."`` fallback for legacy clients plus a
+    UTF-8 percent-encoded ``filename*=UTF-8''...`` that modern clients prefer.
+    """
     disp = "attachment" if as_attachment else "inline"
-    try:
-        filename.encode("ascii")
-        return f'{disp}; filename="{filename}"'
-    except UnicodeEncodeError:
-        # RFC 5987 dual notation: ASCII fallback + UTF-8 percent-encoded extension.
-        ascii_fallback = filename.encode("ascii", "replace").decode("ascii")
-        encoded = quote(filename, safe="")
-        return f"{disp}; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"
+    clean = _CONTROL_CHARS.sub("", filename)
+    if clean.isascii():
+        return f'{disp}; filename="{_quoted_string_content(clean)}"'
+    ascii_fallback = clean.encode("ascii", "replace").decode("ascii")
+    encoded = quote(clean, safe="")
+    return (
+        f"{disp}; filename=\"{_quoted_string_content(ascii_fallback)}\"; filename*=UTF-8''{encoded}"
+    )
+
+
+def _quoted_string_content(value: str) -> str:
+    """Escape ``\\`` and ``"`` as quoted-pairs (RFC 9110 §5.6.4)."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
