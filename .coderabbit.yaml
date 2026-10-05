@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit config for poli-page repos. PRs here are mostly opened and fixed by automated agents
+# (the poli-page auto loop and issue pipeline), which read CodeRabbit's findings and its commit status.
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  allow_author_approval: true
+  # The summary goes in the walkthrough, never in the PR description: the merge gate reads the description.
+  high_level_summary: false
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  review_details: false
+  # The loop decides "reviewed this head" from the CodeRabbit commit status ("Review completed").
+  review_progress: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  # PR labels are the closed issues' labels; CodeRabbit only suggests.
+  auto_apply_labels: false
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+  abort_on_close: true
+  disable_cache: false
+  slop_detection:
+    enabled: true
+    include_all_authors: false
+  auto_review:
+    enabled: true
+    drafts: false
+    # Every push of a fix round must be reviewed, and never auto-paused (the loop allows up to 5 rounds).
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+  path_filters:
+    - "!**/uv.lock"
+    - "!**/*.egg-info/**"
+    - "!**/__pycache__/**"
+    - "!dist/**"
+    - "!build/**"
+    - "!.tox/**"
+    - "!.venv/**"
+    - "!**/.mypy_cache/**"
+    - "!**/.ruff_cache/**"
+    - "!**/.pytest_cache/**"
+    - "!**/.coverage"
+    - "!**/db.sqlite3"
+  path_instructions:
+    - path: "src/django_poli_page/**"
+      instructions: |
+        Reusable Django app wrapping the poli-page Python SDK. Keep the public surface (client singleton, http response helpers, signals, POLI_PAGE settings keys) consistent with the other poli-page SDKs and the API spec (errors are `{ error: { code } }`). No breaking changes without a major version bump. Settings are validated in AppConfig.ready(); keep Django 4.2-5.2 and Python 3.11+ compatibility and full type hints (mypy strict, py.typed).
+    - path: "src/django_poli_page/http.py"
+      instructions: |
+        Response helpers must set correct Content-Type, Content-Disposition and Cache-Control, and must not leak API keys or presigned URLs into logs. Sanitize filenames used in headers.
+    - path: "tests/**"
+      instructions: |
+        Every public helper, setting and signal needs a unit test under tests/unit (mocked SDK, no network). Tests that hit the real API belong in tests/integration only.
+    - path: "example-app/**"
+      instructions: |
+        Sample code that customers copy: favour correctness, security and idiomatic Django. API keys come from environment variables, never hardcoded. Keep the routes and README table in sync with the Python SDK demo steps.
+    - path: "README.md"
+      instructions: |
+        Install snippets, the POLI_PAGE settings table and code samples must match the actual code and defaults in src/django_poli_page/conf.py.
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns: []      # per repo
