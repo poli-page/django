@@ -45,9 +45,9 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 dependencies = [
-    { name = "asgiref", marker = "python_full_version < '3.12'" },
-    { name = "sqlparse", marker = "python_full_version < '3.12'" },
-    { name = "tzdata", marker = "python_full_version < '3.12' and sys_platform == 'win32'" },
+    { name = "asgiref" },
+    { name = "sqlparse" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/65/95/95f7faa0950867afaa0bef2460c6263afd6a2c78cc9434046ed28160b015/django-5.2.14.tar.gz", hash = "sha256:58a63ba841662e5c686b57ba1fec52ddd68c0b93bd96ac3029d55728f00bf8a2", size = 10895118, upload-time = "2026-05-05T13:57:31.104Z" }
 wheels = [
@@ -62,9 +62,9 @@ resolution-markers = [
     "python_full_version >= '3.12'",
 ]
 dependencies = [
-    { name = "asgiref", marker = "python_full_version >= '3.12'" },
-    { name = "sqlparse", marker = "python_full_version >= '3.12'" },
-    { name = "tzdata", marker = "python_full_version >= '3.12' and sys_platform == 'win32'" },
+    { name = "asgiref" },
+    { name = "sqlparse" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/f1/bf85f0d29ef76abf901f193fe8fef4769d3da7794197832bc30151c071d8/django-6.0.5.tar.gz", hash = "sha256:bc6d6872e98a2864c836e42edd644b362db311147dd5aa8d5b82ba7a032f5269", size = 10924131, upload-time = "2026-05-05T13:54:39.329Z" }
 wheels = [
@@ -86,7 +86,7 @@ requires-dist = [
     { name = "django", specifier = ">=4.2" },
     { name = "django-stubs", extras = ["compatible-mypy"], marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "poli-page", editable = "../../sdk-python" },
+    { name = "poli-page", git = "https://github.com/poli-page/sdk-python?rev=f47d94d78f1d6c14232c7ad8c6522d753041d125" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.8" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.12" },
@@ -111,7 +111,7 @@ dependencies = [
 requires-dist = [
     { name = "django", specifier = ">=5.0" },
     { name = "django-poli-page", editable = "../" },
-    { name = "poli-page", editable = "../../sdk-python" },
+    { name = "poli-page", git = "https://github.com/poli-page/sdk-python?rev=f47d94d78f1d6c14232c7ad8c6522d753041d125" },
 ]
 
 [[package]]
@@ -162,26 +162,11 @@ wheels = [
 
 [[package]]
 name = "poli-page"
-source = { editable = "../../sdk-python" }
+version = "0.9.0"
+source = { git = "https://github.com/poli-page/sdk-python?rev=f47d94d78f1d6c14232c7ad8c6522d753041d125#f47d94d78f1d6c14232c7ad8c6522d753041d125" }
 dependencies = [
     { name = "httpx" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "build", marker = "extra == 'dev'", specifier = ">=1" },
-    { name = "httpx", specifier = ">=0.25,<1.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "pdoc", marker = "extra == 'dev'", specifier = ">=14" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1,<1.2" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
-    { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "twine", marker = "extra == 'dev'", specifier = ">=5" },
-]
-provides-extras = ["dev"]
 
 [[package]]
 name = "sqlparse"

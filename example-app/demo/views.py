@@ -7,11 +7,10 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
-from poli_page import PoliPageError
+from poli_page import PoliPageError, RenderInput
 from poli_page.fs import render_to_file as sdk_render_to_file
 
 from django_poli_page import client
@@ -22,10 +21,9 @@ from django_poli_page.http import (
     preview_response,
 )
 
-PROJECT_INPUT: dict[str, Any] = {
+PROJECT_INPUT: RenderInput = {
     "project": "getting-started",
     "template": "welcome",
-    "version": "1.0.0",
     "data": {"name": "django-poli-page demo"},
 }
 
@@ -58,18 +56,7 @@ def render_to_file(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"path": str(output), "size_bytes": output.stat().st_size})
 
 
-# Step 4: render.preview
-def render_preview(request: HttpRequest) -> HttpResponse:
-    raw_html = request.GET.get("html")
-    if raw_html is not None:
-        input_payload: dict[str, Any] = {"template": raw_html, "data": {"name": "inline preview"}}
-    else:
-        input_payload = PROJECT_INPUT
-    result = client.render.preview(input_payload)
-    return preview_response(result)
-
-
-# Step 5: render.document
+# Step 4: render.document
 def document_create(request: HttpRequest) -> JsonResponse:
     descriptor = client.render.document(PROJECT_INPUT)
     return JsonResponse(
@@ -84,7 +71,7 @@ def document_create(request: HttpRequest) -> JsonResponse:
     )
 
 
-# Steps 6 + 9: documents.get (GET) + documents.delete (DELETE) share the URL.
+# Steps 5 + 8: documents.get (GET) + documents.delete (DELETE) share the URL.
 def document_handle(request: HttpRequest, doc_id: str) -> HttpResponse:
     if request.method == "GET":
         descriptor = client.documents.get(doc_id)
@@ -95,7 +82,7 @@ def document_handle(request: HttpRequest, doc_id: str) -> HttpResponse:
     return HttpResponse(status=405)
 
 
-# Step 7: documents.thumbnails
+# Step 6: documents.thumbnails
 def document_thumbnails(request: HttpRequest, doc_id: str) -> JsonResponse:
     thumbs = client.documents.thumbnails(doc_id, {"width": 240})
     return JsonResponse(
@@ -115,20 +102,19 @@ def document_thumbnails(request: HttpRequest, doc_id: str) -> JsonResponse:
     )
 
 
-# Step 8: documents.preview
+# Step 7: documents.preview
 def document_preview(request: HttpRequest, doc_id: str) -> HttpResponse:
     result = client.documents.preview(doc_id)
     return preview_response(result)
 
 
-# Step 10: deliberate INVALID_VERSION_FORMAT
-def error_bad_version(request: HttpRequest) -> JsonResponse:
+# Step 9: deliberate 404 TEMPLATE_NOT_FOUND (getting-started has no such template)
+def error_not_found(request: HttpRequest) -> JsonResponse:
     try:
         client.render.pdf(
             {
                 "project": "getting-started",
-                "template": "welcome",
-                "version": "not-semver",
+                "template": "does-not-exist",
                 "data": {},
             }
         )

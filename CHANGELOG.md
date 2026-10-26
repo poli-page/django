@@ -7,6 +7,18 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 ### Added
 - Initial release scaffolding.
 
+### Changed
+- **Breaking:** API keys are per environment (`pp_sandbox_…`, `pp_live_…`, or `pp_{environment}_…` for an environment created on Pro+). `AppConfig.ready()` no longer raises `ImproperlyConfigured` on a key that does not start with `pp_test_` or `pp_live_`. A missing `POLI_PAGE` setting or an empty `API_KEY` still raises. Any other key that does not match `pp_{environment}_{32 lowercase hex}` now emits one warning, which shows at most its `pp_{environment}_` part and never the secret, and the app starts anyway: the API decides whether the key is valid.
+- **Breaking:** renders carry no template version. The API key's environment selects the published copy of the project. `manage.py poli_page_render` takes `--project` and `--template` and sends a `RenderInput` with no `version`.
+- **Breaking:** `preview_response` accepts only a `DocumentPreviewResult` (from `client.documents.preview(id)`).
+- The integration test runs only with a `pp_sandbox_…` key.
+- The `poli-page` SDK resolves from a pinned sdk-python commit instead of a sibling `../sdk-python` checkout, until the SDK release is published.
+- Example app: renders send no `version`, and the error demo is `GET /errors/not-found`. It renders the template `does-not-exist` and answers `404 TEMPLATE_NOT_FOUND` with the error's `code`, `status`, `message` and `requestId`.
+
+### Removed
+- **Breaking:** `manage.py poli_page_render` options `--template-version`, `--preview` and `--html`. The SDK no longer has `render.preview()` or inline templates.
+- Example app: `GET /render/preview` with its dashboard button and README row, and `GET /errors/bad-version` (`INVALID_VERSION_FORMAT` no longer exists).
+
 ### Fixed
 - `pdf_response` / `pdf_stream_response`: the `Content-Disposition` filename is now escaped per RFC 6266 / RFC 9110 (`\` and `"` as quoted-pairs, ASCII fallback included) and stripped of control characters (CR/LF, TAB, DEL, C1), so a filename can no longer break the header or inject parameters.
 

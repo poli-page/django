@@ -15,5 +15,5 @@ INSTALLED_APPS = [
 USE_TZ = True
 
 POLI_PAGE = {
-    "API_KEY": "pp_test_unit_default",
+    "API_KEY": "pp_sandbox_0123456789abcdef0123456789abcdef",
 }

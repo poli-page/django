@@ -11,7 +11,11 @@ from django.apps import AppConfig
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-_API_KEY_RE = re.compile(r"^pp_(test|live)_")
+# The SDK contract's full-key regex `^pp_{env}_{32 hex}$`; fullmatch anchors both
+# ends (unlike `$`, it also rejects a trailing newline).
+_API_KEY_RE = re.compile(r"pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_[0-9a-f]{32}")
+# The only part of a malformed key a warning may show: `pp_{env}_`, env <= 20 chars.
+_SHOWABLE_PREFIX_RE = re.compile(r"pp_[A-Za-z0-9-]{1,20}_")
 _KNOWN_KEYS = frozenset(
     {"API_KEY", "BASE_URL", "TIMEOUT", "RETRIES", "ON_RETRY", "ON_ERROR", "HTTP_CLIENT"}
 )
@@ -28,7 +32,7 @@ class PoliPageConfig(AppConfig):
         cfg = getattr(settings, "POLI_PAGE", None)
         if cfg is None:
             raise ImproperlyConfigured(
-                "Set POLI_PAGE = {'API_KEY': 'pp_test_...'} in your settings module. "
+                "Set POLI_PAGE = {'API_KEY': 'pp_sandbox_...'} in your settings module. "
                 "See https://docs.poli.page/integrations/django for the full schema.",
             )
         if not isinstance(cfg, dict):
@@ -41,10 +45,16 @@ class PoliPageConfig(AppConfig):
         if api_key is not None:
             if not isinstance(api_key, str) or not api_key:
                 raise ImproperlyConfigured("POLI_PAGE['API_KEY'] must be a non-empty string.")
-            if not _API_KEY_RE.match(api_key):
-                raise ImproperlyConfigured(
-                    "Poli Page API_KEY must start with pp_test_ or pp_live_. "
-                    "Get one at https://app.poli.page/settings/api-keys.",
+            # The API is the only authority on keys (a new environment needs no
+            # release here), so a malformed key is flagged, never refused.
+            if not _API_KEY_RE.fullmatch(api_key):
+                prefix = _SHOWABLE_PREFIX_RE.match(api_key)
+                shown = f'"{prefix.group()}…" ' if prefix else ""
+                warnings.warn(
+                    f"Poli Page API_KEY {shown}does not look like "
+                    "pp_{environment}_{32 hex characters}; "
+                    "starting anyway, the API decides whether it is valid.",
+                    stacklevel=2,
                 )
 
         base_url = cfg.get("BASE_URL")

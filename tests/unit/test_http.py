@@ -131,31 +131,19 @@ def test_pdf_stream_response_non_ascii_filename() -> None:
     assert "filename*=" in disposition.lower()
 
 
-def test_preview_response_html() -> None:
-    from poli_page import PreviewResult
+def test_preview_response_returns_document_preview_html() -> None:
+    from poli_page import DocumentPreviewResult
 
     from django_poli_page.http import preview_response
 
-    preview = PreviewResult(
-        html="<html><body>Hi</body></html>", total_pages=3, environment="sandbox"
-    )
+    preview = DocumentPreviewResult(html="<html><body>stored</body></html>", page_count=5)
     response = preview_response(preview)
 
     assert response.status_code == 200
     assert response["Content-Type"] == "text/html; charset=utf-8"
     assert response["Cache-Control"] == "private, no-store"
     assert response["X-Content-Type-Options"] == "nosniff"
-    assert response.content == b"<html><body>Hi</body></html>"
-
-
-def test_preview_response_accepts_document_preview_result() -> None:
-    from poli_page import DocumentPreviewResult
-
-    from django_poli_page.http import preview_response
-
-    preview = DocumentPreviewResult(html="<html>stored</html>", page_count=5)
-    response = preview_response(preview)
-    assert response.content == b"<html>stored</html>"
+    assert response.content == b"<html><body>stored</body></html>"
 
 
 def test_document_redirect_response_302() -> None:

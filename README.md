@@ -4,7 +4,7 @@
 
 ## About
 
-`django-poli-page` is a reusable Django app around the official `poli-page` Python SDK. You add it to `INSTALLED_APPS`, declare a `POLI_PAGE` settings dict, and you return PDFs, streamed PDFs, HTML previews, and presigned-URL redirects from your views with one helper call each. The app validates configuration at startup, exposes a lazy `PoliPage` singleton, and bridges the SDK's retry and error hooks onto Django signals.
+`django-poli-page` is a reusable Django app around the official `poli-page` Python SDK. You add it to `INSTALLED_APPS`, declare a `POLI_PAGE` settings dict, and you return PDFs, streamed PDFs, stored-document HTML previews, and presigned-URL redirects from your views with one helper call each. The app validates configuration at startup, exposes a lazy `PoliPage` singleton, and bridges the SDK's retry and error hooks onto Django signals.
 
 **When to use this:**
 - You render invoices, contracts, statements or reports from Django views and want the right `Content-Disposition`, `Cache-Control` and `Content-Type` without rewriting them on each route.
@@ -18,7 +18,7 @@
 
 - Python 3.11+
 - Django 4.2 LTS, 5.0, 5.1, or 5.2 LTS
-- A Poli Page API key (`pp_test_*` or `pp_live_*`)
+- A Poli Page API key (`pp_{environment}_…`, see [API keys](#api-keys))
 
 ## Install
 
@@ -41,7 +41,7 @@ POLI_PAGE = {
 ```
 
 ```bash
-export POLI_PAGE_API_KEY=pp_test_your_key_here
+export POLI_PAGE_API_KEY=pp_sandbox_your_key_here
 ```
 
 You get a key from the dashboard at [app.poli.page](https://app.poli.page) under **Settings → API Keys**. Smoke-test the wiring from the command line:
@@ -50,10 +50,21 @@ You get a key from the dashboard at [app.poli.page](https://app.poli.page) under
 python manage.py poli_page_render \
     --project=getting-started \
     --template=welcome \
-    --template-version=1.0.0 \
     --data='{"name":"World"}' \
     --output=welcome.pdf
 ```
+
+### API keys
+
+A key belongs to one environment of your organization and reads `pp_{environment}_{32 hex characters}`. The environment selects which published copy of a project a render uses, so a render input names a project and a template, never a version.
+
+| Environment                           | Key            | Watermark | Counted |
+| ------------------------------------- | -------------- | --------- | ------- |
+| `sandbox` (every org)                 | `pp_sandbox_…` | yes       | no      |
+| `live` (every org, deletable on Pro+) | `pp_live_…`    | no        | yes     |
+| created on Pro+ (e.g. `staging`)      | `pp_staging_…` | no        | yes     |
+
+"Counted" means the render counts toward the organization's monthly PDF quota.
 
 ## Quick start
 
@@ -67,7 +78,6 @@ def invoice_view(request, invoice_id):
     pdf = client.render.pdf({
         "project": "invoices",
         "template": "default",
-        "version": "1.0.0",
         "data": {"invoice_id": invoice_id},
     })
     return pdf_response(pdf, f"invoice-{invoice_id}.pdf")
@@ -79,7 +89,7 @@ You configure everything through a single `POLI_PAGE` dict in your settings modu
 
 | Key | Default | Description |
 |---|---|---|
-| `API_KEY` | — (required) | Your Poli Page key. Must start with `pp_test_` or `pp_live_`. |
+| `API_KEY` | `POLI_PAGE_API_KEY` env var | Your Poli Page key, a non-empty string. A key that does not match `pp_{environment}_{32 hex characters}` raises one startup warning (showing at most its `pp_{environment}_` part), and the app starts anyway: the API decides whether the key is valid. |
 | `BASE_URL` | SDK default | Override the API host. |
 | `TIMEOUT` | SDK default | Per-request timeout in seconds (0 < value <= 600). |
 | `RETRIES.MAX_ATTEMPTS` | SDK default | Retry budget for transient failures (0-10). |
@@ -106,7 +116,7 @@ When `ON_RETRY` or `ON_ERROR` is unset, the SDK hooks dispatch through Django si
 | `django_poli_page.client` | Lazy `PoliPage` singleton, built on first attribute access. |
 | `django_poli_page.http.pdf_response` | Wrap PDF bytes in an `HttpResponse` with PDF headers and disposition. |
 | `django_poli_page.http.pdf_stream_response` | Wrap a chunk iterator in a `StreamingHttpResponse` for large PDFs. |
-| `django_poli_page.http.preview_response` | Return a rendered HTML preview as `text/html`. |
+| `django_poli_page.http.preview_response` | Return a stored document's HTML (`client.documents.preview(id)`) as `text/html`. |
 | `django_poli_page.http.document_redirect_response` | Redirect (302 or 301) to a document's presigned PDF URL. |
 | `django_poli_page.signals.poli_page_retry` | Sent before each SDK retry sleep with the `RetryEvent`. |
 | `django_poli_page.signals.poli_page_error` | Sent on terminal SDK failure with the `PoliPageError`. |
@@ -139,7 +149,6 @@ def invoice_view(request, invoice_id):
         pdf = client.render.pdf({
             "project": "invoices",
             "template": "default",
-            "version": "1.0.0",
             "data": {"invoice_id": invoice_id},
         })
     except PoliPageError as exc:
@@ -157,7 +166,7 @@ A runnable Django 5 project under [`example-app/`](example-app/) covers every pu
 ```bash
 cd example-app
 uv sync
-export POLI_PAGE_API_KEY=pp_test_your_key
+export POLI_PAGE_API_KEY=pp_sandbox_your_key
 uv run python manage.py runserver
 ```
 

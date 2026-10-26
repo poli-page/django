@@ -17,7 +17,7 @@ from django.http import (
     HttpResponseRedirect,
     StreamingHttpResponse,
 )
-from poli_page import DocumentDescriptor, DocumentPreviewResult, PreviewResult
+from poli_page import DocumentDescriptor, DocumentPreviewResult
 
 
 def pdf_response(
@@ -49,8 +49,8 @@ def pdf_stream_response(
     return response
 
 
-def preview_response(preview: PreviewResult | DocumentPreviewResult) -> HttpResponse:
-    """Return the rendered HTML preview as an HttpResponse."""
+def preview_response(preview: DocumentPreviewResult) -> HttpResponse:
+    """Return a stored document's HTML (``client.documents.preview(id)``) as an HttpResponse."""
     response = HttpResponse(preview.html, content_type="text/html; charset=utf-8")
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
