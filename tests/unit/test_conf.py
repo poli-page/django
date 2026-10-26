@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.test import override_settings
 
-SANDBOX_KEY = "pp_sandbox_0123456789abcdef0123456789abcdef"
+from tests.keys import SANDBOX_KEY
 
 
 def test_get_config_returns_settings_dict() -> None:

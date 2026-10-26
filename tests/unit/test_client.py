@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from django.test import override_settings
 
-SANDBOX_KEY = "pp_sandbox_0123456789abcdef0123456789abcdef"
+from tests.keys import SANDBOX_KEY
 
 
 def test_build_client_passes_api_key_only_when_no_other_options(mocker: Any) -> None:

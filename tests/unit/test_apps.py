@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import warnings
 from typing import Any
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.test import override_settings
+
+from tests.keys import SANDBOX_KEY, SECRET
 
 
 def _run_ready() -> None:
@@ -18,8 +21,6 @@ def _run_ready() -> None:
     app_config.ready()
 
 
-SECRET = "0123456789abcdef0123456789abcdef"
-SANDBOX_KEY = f"pp_sandbox_{SECRET}"
 ENV_20 = "a" * 20
 ENV_21 = "a" * 21
 
@@ -75,9 +76,18 @@ def test_well_formed_key_starts_without_warning(key: str) -> None:
     ],
 )
 def test_malformed_key_starts_with_one_warning_without_the_secret(
-    key: str, shown_prefix: str | None
+    key: str,
+    shown_prefix: str | None,
+    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
+    caplog.set_level(logging.DEBUG)
     messages = _ready_warnings(key)
+    captured = capsys.readouterr()
+    for output in (caplog.text, captured.out, captured.err):
+        assert key.strip() not in output
+        assert SECRET[:8] not in output
+        assert SECRET[:8].upper() not in output
 
     assert len(messages) == 1
     message = messages[0]
