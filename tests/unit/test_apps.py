@@ -25,15 +25,51 @@ ENV_20 = "a" * 20
 ENV_21 = "a" * 21
 
 
-def _ready_warnings(api_key: str) -> list[str]:
-    """Run ready() with ``api_key`` and return every warning message it emitted."""
+def _ready_warnings(api_key: str | None) -> list[str]:
+    """Run ready() with ``api_key`` (None: no API_KEY setting) and return its warnings."""
+    cfg = {} if api_key is None else {"API_KEY": api_key}
     with (
-        override_settings(POLI_PAGE={"API_KEY": api_key}),
+        override_settings(POLI_PAGE=cfg),
         warnings.catch_warnings(record=True) as captured,
     ):
         warnings.simplefilter("always")
         _run_ready()
     return [str(w.message) for w in captured]
+
+
+def _assert_one_warning_without_secret(
+    key: str,
+    shown_prefix: str | None,
+    label: str,
+    messages: list[str],
+    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    captured = capsys.readouterr()
+    for output in (caplog.text, captured.out, captured.err):
+        assert key.strip() not in output
+        assert SECRET[:8] not in output
+        assert SECRET[:8].upper() not in output
+
+    assert len(messages) == 1
+    message = messages[0]
+    assert message.endswith(
+        "does not look like pp_{environment}_{32 hex characters}; "
+        "starting anyway, the API decides whether it is valid."
+    )
+    assert key.strip() not in message
+    assert SECRET[:8] not in message
+    assert SECRET[:8].upper() not in message
+    if shown_prefix is None:
+        assert message.startswith(f"Poli Page {label} does not look like")
+    else:
+        assert message.startswith(f'Poli Page {label} "{shown_prefix}…" does not look like')
+
+
+@pytest.fixture(autouse=True)
+def _no_env_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The root conftest may load POLI_PAGE_API_KEY from .env; each test sets its own.
+    monkeypatch.delenv("POLI_PAGE_API_KEY", raising=False)
 
 
 @pytest.mark.parametrize(
@@ -51,30 +87,31 @@ def test_well_formed_key_starts_without_warning(key: str) -> None:
     assert _ready_warnings(key) == []
 
 
-@pytest.mark.parametrize(
-    ("key", "shown_prefix"),
-    [
-        ("pp_sandbox_x", "pp_sandbox_"),
-        (f"pp_Sandbox_{SECRET}", "pp_Sandbox_"),
-        (f"pp_2fa_{SECRET}", "pp_2fa_"),
-        (f"pp_a--b_{SECRET}", "pp_a--b_"),
-        (f"pp_eu-_{SECRET}", "pp_eu-_"),
-        (f"pp_eu_prod_{SECRET}", "pp_eu_"),
-        (f"pp_{ENV_20}_{SECRET[:31]}", f"pp_{ENV_20}_"),
-        (f"pp_sandbox_{SECRET}0", "pp_sandbox_"),
-        (f"pp_sandbox_{SECRET.upper()}", "pp_sandbox_"),
-        (f"pp_sandbox_{SECRET[:-1]}g", "pp_sandbox_"),
-        (f"pp_sandbox_{SECRET}x", "pp_sandbox_"),
-        (f"pp_sandbox_{SECRET}\n", "pp_sandbox_"),
-        (f" pp_sandbox_{SECRET}", None),
-        (f"xpp_sandbox_{SECRET}", None),
-        (f"sk_pp_sandbox_{SECRET}", None),
-        (f"pp_{ENV_21}_{SECRET}", None),
-        (f"pp__{SECRET}", None),
-        (SECRET, None),
-        ("not-a-poli-page-token", None),
-    ],
-)
+MALFORMED_KEYS = [
+    ("pp_sandbox_x", "pp_sandbox_"),
+    (f"pp_Sandbox_{SECRET}", "pp_Sandbox_"),
+    (f"pp_2fa_{SECRET}", "pp_2fa_"),
+    (f"pp_a--b_{SECRET}", "pp_a--b_"),
+    (f"pp_eu-_{SECRET}", "pp_eu-_"),
+    (f"pp_eu_prod_{SECRET}", "pp_eu_"),
+    (f"pp_{ENV_20}_{SECRET[:31]}", f"pp_{ENV_20}_"),
+    (f"pp_sandbox_{SECRET}0", "pp_sandbox_"),
+    (f"pp_sandbox_{SECRET.upper()}", "pp_sandbox_"),
+    (f"pp_sandbox_{SECRET[:-1]}g", "pp_sandbox_"),
+    (f"pp_sandbox_{SECRET}x", "pp_sandbox_"),
+    (f"pp_sandbox_{SECRET}\n", "pp_sandbox_"),
+    (f" pp_sandbox_{SECRET}", None),
+    (f"xpp_sandbox_{SECRET}", None),
+    (f"sk_pp_sandbox_{SECRET}", None),
+    (f"pp_{ENV_21}_{SECRET}", None),
+    (f"pp__{SECRET}", None),
+    (SECRET, None),
+    ("not-a-poli-page-token", None),
+]
+ENV_LABEL = "API key from POLI_PAGE_API_KEY"
+
+
+@pytest.mark.parametrize(("key", "shown_prefix"), MALFORMED_KEYS)
 def test_malformed_key_starts_with_one_warning_without_the_secret(
     key: str,
     shown_prefix: str | None,
@@ -83,25 +120,44 @@ def test_malformed_key_starts_with_one_warning_without_the_secret(
 ) -> None:
     caplog.set_level(logging.DEBUG)
     messages = _ready_warnings(key)
-    captured = capsys.readouterr()
-    for output in (caplog.text, captured.out, captured.err):
-        assert key.strip() not in output
-        assert SECRET[:8] not in output
-        assert SECRET[:8].upper() not in output
+    _assert_one_warning_without_secret(key, shown_prefix, "API_KEY", messages, caplog, capsys)
 
-    assert len(messages) == 1
-    message = messages[0]
-    assert message.endswith(
-        "does not look like pp_{environment}_{32 hex characters}; "
-        "starting anyway, the API decides whether it is valid."
-    )
-    assert key.strip() not in message
-    assert SECRET[:8] not in message
-    assert SECRET[:8].upper() not in message
-    if shown_prefix is None:
-        assert message.startswith("Poli Page API_KEY does not look like")
-    else:
-        assert message.startswith(f'Poli Page API_KEY "{shown_prefix}…" does not look like')
+
+@pytest.mark.parametrize(("key", "shown_prefix"), MALFORMED_KEYS)
+def test_malformed_env_fallback_key_starts_with_one_warning_without_the_secret(
+    key: str,
+    shown_prefix: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # With no API_KEY setting the SDK reads POLI_PAGE_API_KEY, so that key is checked.
+    monkeypatch.setenv("POLI_PAGE_API_KEY", key)
+    caplog.set_level(logging.DEBUG)
+    messages = _ready_warnings(None)
+    _assert_one_warning_without_secret(key, shown_prefix, ENV_LABEL, messages, caplog, capsys)
+
+
+@pytest.mark.parametrize("key", [SANDBOX_KEY, f"pp_eu-prod_{SECRET}"])
+def test_well_formed_env_fallback_key_starts_without_warning(
+    key: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("POLI_PAGE_API_KEY", key)
+    assert _ready_warnings(None) == []
+
+
+def test_api_key_setting_wins_over_a_malformed_env_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The SDK ignores the env var when API_KEY is set, so only the setting is checked.
+    monkeypatch.setenv("POLI_PAGE_API_KEY", "pp_sandbox_x")
+    assert _ready_warnings(SANDBOX_KEY) == []
+
+
+def test_malformed_api_key_setting_warns_even_with_a_well_formed_env_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("POLI_PAGE_API_KEY", SANDBOX_KEY)
+    (message,) = _ready_warnings("pp_sandbox_x")
+    assert message.startswith('Poli Page API_KEY "pp_sandbox_…" does not look like')
 
 
 def test_malformed_key_shows_a_20_character_environment_prefix() -> None:
@@ -123,11 +179,16 @@ def test_missing_poli_page_setting_raises(settings: Any) -> None:
         _run_ready()
 
 
-@override_settings(POLI_PAGE={})
-def test_missing_api_key_defers_to_sdk_env_fallback() -> None:
+@pytest.mark.parametrize("env_key", [None, ""])
+def test_missing_api_key_defers_to_sdk_env_fallback(
+    env_key: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Per spec §6.2: when API_KEY is absent, defer to the SDK's POLI_PAGE_API_KEY
-    # env-var fallback. ready() must not raise.
-    _run_ready()
+    # env-var fallback. With no usable env key either, ready() neither raises nor
+    # warns: the SDK reports the missing key when it builds the client.
+    if env_key is not None:
+        monkeypatch.setenv("POLI_PAGE_API_KEY", env_key)
+    assert _ready_warnings(None) == []
 
 
 @pytest.mark.parametrize("empty_key", ["", 42, b"pp_sandbox_x"])

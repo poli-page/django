@@ -1,6 +1,6 @@
 # `django-poli-page` example project
 
-Minimal Django 5 project demonstrating every public method of the Poli Page Python SDK through `django-poli-page`. Each route corresponds 1:1 to a step in the SDK's canonical demo (`../../sdk-python/demo/sync_demo.py`).
+Minimal Django 5 project demonstrating every public method of the Poli Page Python SDK through `django-poli-page`. Each route is one step of the nine-step demo contract in [poli-page/django#2](https://github.com/poli-page/django/issues/2).
 
 ## Setup
 
@@ -16,9 +16,9 @@ uv run python manage.py runserver
 
 Then open <http://localhost:8000/> — the interactive demo dashboard. One button per SDK feature, inline PDF and stored-HTML previews, JSON pretty-print.
 
-## Routes (mirror SDK demo steps 1–9)
+## Routes (demo steps 1–9)
 
-| SDK demo step | URL | View |
+| Demo step | URL | View |
 |---|---|---|
 | (UI) | `GET /` | `dashboard` |
 | 1. `render.pdf` | `GET /render/pdf` | `render_pdf` |

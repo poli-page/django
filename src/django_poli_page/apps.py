@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import warnings
 from typing import Any
@@ -45,17 +46,13 @@ class PoliPageConfig(AppConfig):
         if api_key is not None:
             if not isinstance(api_key, str) or not api_key:
                 raise ImproperlyConfigured("POLI_PAGE['API_KEY'] must be a non-empty string.")
-            # The API is the only authority on keys (a new environment needs no
-            # release here), so a malformed key is flagged, never refused.
-            if not _API_KEY_RE.fullmatch(api_key):
-                prefix = _SHOWABLE_PREFIX_RE.match(api_key)
-                shown = f'"{prefix.group()}…" ' if prefix else ""
-                warnings.warn(
-                    f"Poli Page API_KEY {shown}does not look like "
-                    "pp_{environment}_{32 hex characters}; "
-                    "starting anyway, the API decides whether it is valid.",
-                    stacklevel=2,
-                )
+            _warn_if_malformed(api_key, "API_KEY")
+        else:
+            # The SDK falls back to this env var when API_KEY is absent; with no
+            # usable value either, the SDK reports the missing key itself.
+            env_key = os.environ.get("POLI_PAGE_API_KEY")
+            if env_key:
+                _warn_if_malformed(env_key, "API key from POLI_PAGE_API_KEY")
 
         base_url = cfg.get("BASE_URL")
         if base_url is not None:
@@ -107,3 +104,17 @@ class PoliPageConfig(AppConfig):
         unknown_top = set(cfg) - _KNOWN_KEYS
         for key in unknown_top:
             warnings.warn(f"Unknown POLI_PAGE key: {key!r}", stacklevel=2)
+
+
+def _warn_if_malformed(api_key: str, label: str) -> None:
+    # The API is the only authority on keys (a new environment needs no
+    # release here), so a malformed key is flagged, never refused.
+    if not _API_KEY_RE.fullmatch(api_key):
+        prefix = _SHOWABLE_PREFIX_RE.match(api_key)
+        shown = f'"{prefix.group()}…" ' if prefix else ""
+        warnings.warn(
+            f"Poli Page {label} {shown}does not look like "
+            "pp_{environment}_{32 hex characters}; "
+            "starting anyway, the API decides whether it is valid.",
+            stacklevel=3,
+        )

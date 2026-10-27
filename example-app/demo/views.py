@@ -1,6 +1,6 @@
 """Demo views — one per SDK step + the / dashboard.
 
-Mirrors sdk-python/demo/sync_demo.py 1:1 so a reader can put them side by side.
+One view per step of the nine-step demo contract in poli-page/django#2.
 """
 
 from __future__ import annotations
