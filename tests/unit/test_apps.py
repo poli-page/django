@@ -98,10 +98,12 @@ def test_well_formed_key_starts_without_warning(key: str) -> None:
 
 MALFORMED_KEYS = [
     ("pp_sandbox_x", "pp_sandbox_"),
-    (f"pp_Sandbox_{SECRET}", "pp_Sandbox_"),
-    (f"pp_2fa_{SECRET}", "pp_2fa_"),
-    (f"pp_a--b_{SECRET}", "pp_a--b_"),
-    (f"pp_eu-_{SECRET}", "pp_eu-_"),
+    (f"pp_Sandbox_{SECRET}", None),
+    (f"pp_2fa_{SECRET}", None),
+    ("pp_0123456789abcdef0123_rest", None),
+    (f"pp_a--b_{SECRET}", None),
+    (f"pp_eu-_{SECRET}", None),
+    (f"pp_-eu_{SECRET}", None),
     (f"pp_eu_prod_{SECRET}", "pp_eu_"),
     (f"pp_{ENV_20}_{SECRET[:31]}", f"pp_{ENV_20}_"),
     (f"pp_sandbox_{SECRET}0", "pp_sandbox_"),

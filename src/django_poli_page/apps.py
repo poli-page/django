@@ -12,11 +12,15 @@ from django.apps import AppConfig
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
+# `pp_{env}_`, where {env} follows the SDK contract's environment-name grammar
+# (a letter first, then lowercase letters, digits and single inner hyphens, at
+# most 20 characters).
+_ENV_PREFIX = r"pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_"
 # The SDK contract's full-key regex `^pp_{env}_{32 hex}$`; fullmatch anchors both
 # ends (unlike `$`, it also rejects a trailing newline).
-_API_KEY_RE = re.compile(r"pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_[0-9a-f]{32}")
-# The only part of a malformed key a warning may show: `pp_{env}_`, env <= 20 chars.
-_SHOWABLE_PREFIX_RE = re.compile(r"pp_[A-Za-z0-9-]{1,20}_")
+_API_KEY_RE = re.compile(_ENV_PREFIX + r"[0-9a-f]{32}")
+# The only part of a malformed key a warning may show.
+_SHOWABLE_PREFIX_RE = re.compile(_ENV_PREFIX)
 _KNOWN_KEYS = frozenset(
     {"API_KEY", "BASE_URL", "TIMEOUT", "RETRIES", "ON_RETRY", "ON_ERROR", "HTTP_CLIENT"}
 )
