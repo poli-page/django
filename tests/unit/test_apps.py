@@ -66,6 +66,15 @@ def _assert_one_warning_without_secret(
         assert message.startswith(f'Poli Page {label} "{shown_prefix}…" does not look like')
 
 
+@pytest.fixture
+def debug_caplog(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
+    # Lowering only the root logger is not enough: Django's logging config keeps
+    # the "django" logger at INFO, which would drop a DEBUG leak on django.*.
+    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="django")
+    return caplog
+
+
 @pytest.fixture(autouse=True)
 def _no_env_key(monkeypatch: pytest.MonkeyPatch) -> None:
     # The root conftest may load POLI_PAGE_API_KEY from .env; each test sets its own.
@@ -115,12 +124,11 @@ ENV_LABEL = "API key from POLI_PAGE_API_KEY"
 def test_malformed_key_starts_with_one_warning_without_the_secret(
     key: str,
     shown_prefix: str | None,
-    caplog: pytest.LogCaptureFixture,
+    debug_caplog: pytest.LogCaptureFixture,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
     messages = _ready_warnings(key)
-    _assert_one_warning_without_secret(key, shown_prefix, "API_KEY", messages, caplog, capsys)
+    _assert_one_warning_without_secret(key, shown_prefix, "API_KEY", messages, debug_caplog, capsys)
 
 
 @pytest.mark.parametrize(("key", "shown_prefix"), MALFORMED_KEYS)
@@ -128,14 +136,13 @@ def test_malformed_env_fallback_key_starts_with_one_warning_without_the_secret(
     key: str,
     shown_prefix: str | None,
     monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
+    debug_caplog: pytest.LogCaptureFixture,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     # With no API_KEY setting the SDK reads POLI_PAGE_API_KEY, so that key is checked.
     monkeypatch.setenv("POLI_PAGE_API_KEY", key)
-    caplog.set_level(logging.DEBUG)
     messages = _ready_warnings(None)
-    _assert_one_warning_without_secret(key, shown_prefix, ENV_LABEL, messages, caplog, capsys)
+    _assert_one_warning_without_secret(key, shown_prefix, ENV_LABEL, messages, debug_caplog, capsys)
 
 
 @pytest.mark.parametrize("key", [SANDBOX_KEY, f"pp_eu-prod_{SECRET}"])
