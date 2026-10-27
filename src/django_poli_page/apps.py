@@ -12,15 +12,11 @@ from django.apps import AppConfig
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-# `pp_{env}_`, where {env} follows the SDK contract's environment-name grammar
-# (a letter first, then lowercase letters, digits and single inner hyphens, at
-# most 20 characters).
-_ENV_PREFIX = r"pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_"
-# The SDK contract's full-key regex `^pp_{env}_{32 hex}$`; fullmatch anchors both
-# ends (unlike `$`, it also rejects a trailing newline).
-_API_KEY_RE = re.compile(_ENV_PREFIX + r"[0-9a-f]{32}")
-# The only part of a malformed key a warning may show.
-_SHOWABLE_PREFIX_RE = re.compile(_ENV_PREFIX)
+# The SDK contract's full-key regex `^pp_{env}_{32 hex}$`, where {env} starts with
+# a letter, then lowercase letters, digits and single inner hyphens, at most 20
+# characters. fullmatch anchors both ends (unlike `$`, it also rejects a trailing
+# newline).
+_API_KEY_RE = re.compile(r"pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_[0-9a-f]{32}")
 _KNOWN_KEYS = frozenset(
     {"API_KEY", "BASE_URL", "TIMEOUT", "RETRIES", "ON_RETRY", "ON_ERROR", "HTTP_CLIENT"}
 )
@@ -112,13 +108,12 @@ class PoliPageConfig(AppConfig):
 
 def _warn_if_malformed(api_key: str, label: str) -> None:
     # The API is the only authority on keys (a new environment needs no
-    # release here), so a malformed key is flagged, never refused.
+    # release here), so a malformed key is flagged, never refused. The warning
+    # shows no part of the key: even a pp_{env}_ prefix can be a pasted secret.
     if not _API_KEY_RE.fullmatch(api_key):
-        prefix = _SHOWABLE_PREFIX_RE.match(api_key)
-        shown = f'"{prefix.group()}…" ' if prefix else ""
         warnings.warn(
-            f"Poli Page {label} {shown}does not look like "
-            "pp_{environment}_{32 hex characters}; "
+            f"Poli Page {label} does not look like "
+            "pp_{environment}_{32 lowercase hex characters}; "
             "starting anyway, the API decides whether it is valid.",
             stacklevel=3,
         )

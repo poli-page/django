@@ -89,7 +89,7 @@ You configure everything through a single `POLI_PAGE` dict in your settings modu
 
 | Key | Default | Description |
 |---|---|---|
-| `API_KEY` | `POLI_PAGE_API_KEY` env var | Your Poli Page key, a non-empty string. A key that does not match `pp_{environment}_{32 hex characters}` raises one startup warning (showing at most its `pp_{environment}_` part), and the app starts anyway: the API decides whether the key is valid. When `API_KEY` is absent, the same check applies to the `POLI_PAGE_API_KEY` env var. |
+| `API_KEY` | `POLI_PAGE_API_KEY` env var | Your Poli Page key, a non-empty string. A key that does not match `pp_{environment}_{32 lowercase hex characters}` raises one startup warning, which shows no part of the key, and the app starts anyway: the API decides whether the key is valid. When `API_KEY` is absent, the same check applies to the `POLI_PAGE_API_KEY` env var. |
 | `BASE_URL` | SDK default | Override the API host. |
 | `TIMEOUT` | SDK default | Per-request timeout in seconds (0 < value <= 600). |
 | `RETRIES.MAX_ATTEMPTS` | SDK default | Retry budget for transient failures (0-10). |
