@@ -1,4 +1,7 @@
-"""One smoke integration test that hits the live API (the SDK default base URL).
+"""One smoke integration test that hits the live API.
+
+The API is the SDK default base URL, or POLI_PAGE_BASE_URL when it is set (the SDK
+reads that variable itself; CI passes the optional secret of the same name).
 
 Skipped when POLI_PAGE_API_KEY is unset. Runs only with a pp_sandbox_ key: every
 other environment (live, or one created on Pro+) counts renders toward the
