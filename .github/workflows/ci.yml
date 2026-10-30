@@ -11,10 +11,10 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11", "3.12", "3.13"]
-        django: ["4.2", "5.0", "5.1", "5.2"]
+        django: ["4.2", "5.0", "5.1", "5.2", "6.0"]
         exclude:
-          - { python: "3.11", django: "5.2" }   # 5.2 LTS requires Python 3.12+
           - { python: "3.13", django: "4.2" }   # 4.2 LTS doesn't support 3.13
+          - { python: "3.11", django: "6.0" }   # 6.0 requires Python 3.12+
     env:
       UV_PYTHON: ${{ matrix.python }}
     steps:
@@ -46,15 +46,17 @@ jobs:
           POLI_CONTRACT: ${{ steps.contract.outputs.path }}
         run: uv run --no-sync pytest tests/unit -v
       # The example app is its own uv project (Django 5+, its own uv.lock) with the
-      # package installed from this checkout.
+      # package installed from this checkout. It runs on its locked Django (5.2 on
+      # Python 3.11, 6.0 on 3.12+), whatever the leg's `django` value.
       - name: Example app install
         working-directory: example-app
         run: |
           uv sync --locked
           uv run python manage.py check
       - name: Contract tests (example app)
-        # tests/test_contract.py runs the contract's impl cases against the example app.
-        # With CI set it fails, never skips, when POLI_CONTRACT is missing.
+        # tests/test_contract.py runs the contract's impl cases against the example app
+        # (with CI set it fails, never skips, when POLI_CONTRACT is missing);
+        # tests/test_render_stream.py checks the streamed route's error answers.
         working-directory: example-app
         env:
           CI: "true"

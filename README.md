@@ -17,7 +17,7 @@
 ## Requirements
 
 - Python 3.11+
-- Django 4.2 LTS, 5.0, 5.1, or 5.2 LTS
+- Django 4.2 LTS, 5.0, 5.1, 5.2 LTS, or 6.0
 - The `poli-page` Python SDK 0.11.0 or later (installed with the app, `poli-page>=0.11.0,<2`)
 - A Poli Page API key (`pp_{environment}_…`, see [API keys](#api-keys))
 
@@ -119,15 +119,13 @@ When `ON_RETRY` or `ON_ERROR` is unset, the SDK hooks dispatch through Django si
 |---|---|
 | `django_poli_page.client` | Lazy `PoliPage` singleton, built on first attribute access. |
 | `django_poli_page.http.pdf_response` | Wrap PDF bytes in an `HttpResponse` with PDF headers and disposition. |
-| `django_poli_page.http.pdf_stream_response` | Wrap a chunk iterator in a `StreamingHttpResponse` for large PDFs. |
+| `django_poli_page.http.pdf_stream_response` | Stream a PDF in a `StreamingHttpResponse`. Pass the SDK stream as is, `pdf_stream_response(client.render.pdf_stream(input))`: the render and the download start in the view, so an SDK error reaches the error handler instead of a 200 PDF that has already started. |
 | `django_poli_page.http.preview_response` | Return a stored document's HTML (`client.documents.preview(id)`) as `text/html`. |
 | `django_poli_page.http.document_redirect_response` | Redirect (302 or 301) to a document's presigned PDF URL. |
 | `django_poli_page.middleware.PoliPageErrorMiddleware` | Error handler, on by default: answers a `PoliPageError` as JSON. |
 | `django_poli_page.signals.poli_page_retry` | Sent before each SDK retry sleep with the `RetryEvent`. |
 | `django_poli_page.signals.poli_page_error` | Sent on terminal SDK failure with the `PoliPageError`. |
 | `manage.py poli_page_render` | Render a template end-to-end from the CLI; exits non-zero on `PoliPageError`. |
-
-Full reference: [docs/api.md](docs/api.md).
 
 ## Errors
 
@@ -157,7 +155,9 @@ POLI_PAGE = {
 }
 ```
 
-The app adds the middleware once, at startup; listing it yourself in `MIDDLEWARE` places it where you want it, and it is not added a second time.
+The app adds the middleware once, at startup; listing it yourself in `MIDDLEWARE` places it where you want it, and it is not added a second time. A later replacement of `MIDDLEWARE`, such as `override_settings(MIDDLEWARE=[...])` or pytest-django's `settings.MIDDLEWARE = [...]` in a test, drops the handler unless the new list includes `"django_poli_page.middleware.PoliPageErrorMiddleware"`.
+
+For a streamed PDF, hand the SDK stream to `pdf_stream_response` instead of opening it inside a generator: an error raised once the body is streaming comes after the `200` is sent, and no handler can answer it.
 
 ### Error types
 
@@ -212,7 +212,7 @@ uv run python manage.py runserver
 
 | Package version | Django | Python |
 |---|---|---|
-| 0.1.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS | 3.11, 3.12, 3.13 |
+| 0.1.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS, 6.0 | 3.11, 3.12, 3.13 (Django 6.0: 3.12+) |
 
 The package follows the Django supported-versions policy; releases drop a Django row when upstream marks it end-of-life.
 

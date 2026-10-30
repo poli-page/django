@@ -184,7 +184,7 @@ def test_missing_poli_page_setting_raises(settings: Any) -> None:
 def test_missing_api_key_defers_to_sdk_env_fallback(
     env_key: str | None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Per spec §6.2: when API_KEY is absent, defer to the SDK's POLI_PAGE_API_KEY
+    # When API_KEY is absent, defer to the SDK's POLI_PAGE_API_KEY
     # env-var fallback. With no usable env key either, ready() neither raises nor
     # warns: the SDK reports the missing key when it builds the client.
     if env_key is not None:
