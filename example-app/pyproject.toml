@@ -12,3 +12,15 @@ dependencies = [
 [tool.uv.sources]
 # The integration always installs from the parent checkout.
 django-poli-page = { path = "..", editable = true }
+
+[dependency-groups]
+# The contract test (tests/test_contract.py) runs the app under pytest-django.
+dev = [
+    "pytest>=8",
+    "pytest-django>=4.8",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "example_project.settings"
+pythonpath = ["."]
+testpaths = ["tests"]

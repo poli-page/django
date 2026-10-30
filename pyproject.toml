@@ -85,7 +85,7 @@ select = ["E", "F", "W", "I", "B", "UP", "RUF", "SIM", "DJ"]
 python_version = "3.11"
 strict = true
 plugins = ["mypy_django_plugin.main"]
-files = ["src", "tests"]
+files = ["src", "tests", "example-app/tests"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
