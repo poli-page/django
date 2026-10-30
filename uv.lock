@@ -284,9 +284,9 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 dependencies = [
-    { name = "asgiref", marker = "python_full_version < '3.12'" },
-    { name = "sqlparse", marker = "python_full_version < '3.12'" },
-    { name = "tzdata", marker = "python_full_version < '3.12' and sys_platform == 'win32'" },
+    { name = "asgiref" },
+    { name = "sqlparse" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/65/95/95f7faa0950867afaa0bef2460c6263afd6a2c78cc9434046ed28160b015/django-5.2.14.tar.gz", hash = "sha256:58a63ba841662e5c686b57ba1fec52ddd68c0b93bd96ac3029d55728f00bf8a2", size = 10895118, upload-time = "2026-05-05T13:57:31.104Z" }
 wheels = [
@@ -302,9 +302,9 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.15'",
 ]
 dependencies = [
-    { name = "asgiref", marker = "python_full_version >= '3.12'" },
-    { name = "sqlparse", marker = "python_full_version >= '3.12'" },
-    { name = "tzdata", marker = "python_full_version >= '3.12' and sys_platform == 'win32'" },
+    { name = "asgiref" },
+    { name = "sqlparse" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/f1/bf85f0d29ef76abf901f193fe8fef4769d3da7794197832bc30151c071d8/django-6.0.5.tar.gz", hash = "sha256:bc6d6872e98a2864c836e42edd644b362db311147dd5aa8d5b82ba7a032f5269", size = 10924131, upload-time = "2026-05-05T13:54:39.329Z" }
 wheels = [
@@ -339,7 +339,7 @@ requires-dist = [
     { name = "django", specifier = ">=4.2" },
     { name = "django-stubs", extras = ["compatible-mypy"], marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "poli-page", editable = "../sdk-python" },
+    { name = "poli-page", specifier = ">=0.11.0,<2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.8" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.12" },
@@ -456,7 +456,7 @@ name = "importlib-metadata"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp", marker = "python_full_version < '3.12'" },
+    { name = "zipp" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a9/01/15bb152d77b21318514a96f43af312635eb2500c96b55398d020c93d86ea/importlib_metadata-9.0.0.tar.gz", hash = "sha256:a4f57ab599e6a2e3016d7595cfd72eb4661a5106e787a95bcc90c7105b831efc", size = 56405, upload-time = "2026-03-20T06:42:56.999Z" }
 wheels = [
@@ -761,26 +761,15 @@ wheels = [
 
 [[package]]
 name = "poli-page"
-source = { editable = "../sdk-python" }
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "build", marker = "extra == 'dev'", specifier = ">=1" },
-    { name = "httpx", specifier = ">=0.25,<1.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "pdoc", marker = "extra == 'dev'", specifier = ">=14" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1,<1.2" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
-    { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "twine", marker = "extra == 'dev'", specifier = ">=5" },
+sdist = { url = "https://files.pythonhosted.org/packages/1b/75/3f78e5875adb1a2371886b3304ea91092951fdfdb53f79383d9fa14186c7/poli_page-0.11.0.tar.gz", hash = "sha256:b3a23fbe393b6a90263f18f705e85ba992ec52006f018bf431cd93dbc4b10279", size = 96372, upload-time = "2026-10-30T09:06:31.893Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/aa/ad63445ea2a6404698551bc3632b5fdf2ef3b9fa89c7308aad95f97c0e95/poli_page-0.11.0-py3-none-any.whl", hash = "sha256:f4d474146d42c52e93b4617068811a0243f63a5e5505127e916e643861fdd11c", size = 34957, upload-time = "2026-10-30T09:06:30.599Z" },
 ]
-provides-extras = ["dev"]
 
 [[package]]
 name = "pycparser"

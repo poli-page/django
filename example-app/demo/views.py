@@ -1,17 +1,15 @@
 """Demo views — one per SDK step + the / dashboard.
 
-Mirrors sdk-python/demo/sync_demo.py 1:1 so a reader can put them side by side.
+One view per step of the nine-step demo contract in poli-page/django#2.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
-from poli_page import PoliPageError
+from poli_page import RenderInput
 from poli_page.fs import render_to_file as sdk_render_to_file
 
 from django_poli_page import client
@@ -22,10 +20,9 @@ from django_poli_page.http import (
     preview_response,
 )
 
-PROJECT_INPUT: dict[str, Any] = {
+PROJECT_INPUT: RenderInput = {
     "project": "getting-started",
     "template": "welcome",
-    "version": "1.0.0",
     "data": {"name": "django-poli-page demo"},
 }
 
@@ -42,12 +39,11 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
 
 
 # Step 2: render.pdf_stream
-def render_stream(request: HttpRequest) -> HttpResponse:
-    def chunks() -> Iterator[bytes]:
-        with client.render.pdf_stream(PROJECT_INPUT) as stream:
-            yield from stream
-
-    return pdf_stream_response(chunks(), "welcome-streamed.pdf", as_attachment=False)
+# The SDK stream goes to the helper as is: the render and the download start in the
+# view, so an SDK error reaches the error handler instead of a committed 200 PDF.
+def render_stream(request: HttpRequest) -> StreamingHttpResponse:
+    stream = client.render.pdf_stream(PROJECT_INPUT)
+    return pdf_stream_response(stream, "welcome-streamed.pdf", as_attachment=False)
 
 
 # Step 3: render_to_file
@@ -58,18 +54,7 @@ def render_to_file(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"path": str(output), "size_bytes": output.stat().st_size})
 
 
-# Step 4: render.preview
-def render_preview(request: HttpRequest) -> HttpResponse:
-    raw_html = request.GET.get("html")
-    if raw_html is not None:
-        input_payload: dict[str, Any] = {"template": raw_html, "data": {"name": "inline preview"}}
-    else:
-        input_payload = PROJECT_INPUT
-    result = client.render.preview(input_payload)
-    return preview_response(result)
-
-
-# Step 5: render.document
+# Step 4: render.document
 def document_create(request: HttpRequest) -> JsonResponse:
     descriptor = client.render.document(PROJECT_INPUT)
     return JsonResponse(
@@ -84,7 +69,7 @@ def document_create(request: HttpRequest) -> JsonResponse:
     )
 
 
-# Steps 6 + 9: documents.get (GET) + documents.delete (DELETE) share the URL.
+# Steps 5 + 8: documents.get (GET) + documents.delete (DELETE) share the URL.
 def document_handle(request: HttpRequest, doc_id: str) -> HttpResponse:
     if request.method == "GET":
         descriptor = client.documents.get(doc_id)
@@ -95,7 +80,7 @@ def document_handle(request: HttpRequest, doc_id: str) -> HttpResponse:
     return HttpResponse(status=405)
 
 
-# Step 7: documents.thumbnails
+# Step 6: documents.thumbnails
 def document_thumbnails(request: HttpRequest, doc_id: str) -> JsonResponse:
     thumbs = client.documents.thumbnails(doc_id, {"width": 240})
     return JsonResponse(
@@ -115,33 +100,21 @@ def document_thumbnails(request: HttpRequest, doc_id: str) -> JsonResponse:
     )
 
 
-# Step 8: documents.preview
+# Step 7: documents.preview
 def document_preview(request: HttpRequest, doc_id: str) -> HttpResponse:
     result = client.documents.preview(doc_id)
     return preview_response(result)
 
 
-# Step 10: deliberate INVALID_VERSION_FORMAT
-def error_bad_version(request: HttpRequest) -> JsonResponse:
-    try:
-        client.render.pdf(
-            {
-                "project": "getting-started",
-                "template": "welcome",
-                "version": "not-semver",
-                "data": {},
-            }
-        )
-    except PoliPageError as exc:
-        payload = exc.to_payload()
-        return JsonResponse(
-            {
-                "caught": True,
-                "code": payload["code"],
-                "message": payload["message"],
-                "status": payload["status"],
-                "requestId": payload["requestId"],
-            },
-            status=payload["status"] or 500,
-        )
-    return JsonResponse({"caught": False, "note": "expected error, got success"}, status=500)
+# Step 9: deliberate 404 TEMPLATE_NOT_FOUND (getting-started has no such template).
+# No try/except: the PoliPageError reaches django-poli-page's error handler, which
+# answers 404 with the error's to_payload() body.
+def error_not_found(request: HttpRequest) -> HttpResponse:
+    pdf = client.render.pdf(
+        {
+            "project": "getting-started",
+            "template": "does-not-exist",
+            "data": {},
+        }
+    )
+    return pdf_response(pdf, "does-not-exist.pdf", as_attachment=False)

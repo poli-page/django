@@ -12,7 +12,7 @@ def _load_root_env() -> None:
     """Load the repo-root .env if present; never overwrite real env vars.
 
     Mirrors tests/conftest.py — both load the django/ repo-root .env so test
-    runs and the example app share one source of truth (CLAUDE.md §10.3).
+    runs and the example app share one source of truth.
     """
     # example-app/manage.py -> example-app/ -> django/.env
     env_path = Path(__file__).resolve().parent.parent / ".env"

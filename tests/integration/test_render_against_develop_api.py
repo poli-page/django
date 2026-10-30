@@ -1,7 +1,8 @@
 """One smoke integration test that hits the develop API.
 
-Skipped when POLI_PAGE_API_KEY is unset. Refuses to run with pp_live_ keys
-(safety belt against accidentally hitting production).
+Skipped when POLI_PAGE_API_KEY is unset. Runs only with a pp_sandbox_ key: every
+other environment (live, or one created on Pro+) counts renders toward the
+organization's monthly quota.
 """
 
 from __future__ import annotations
@@ -19,8 +20,10 @@ from django.test import override_settings
 )
 def test_render_getting_started_welcome_returns_pdf() -> None:
     api_key = os.environ["POLI_PAGE_API_KEY"]
-    if not api_key.startswith("pp_test_"):
-        pytest.skip("POLI_PAGE_API_KEY must be a pp_test_ key; refusing to run against prod.")
+    if not api_key.startswith("pp_sandbox_"):
+        pytest.skip(
+            "POLI_PAGE_API_KEY must be a pp_sandbox_ key; refusing to run in a counted environment."
+        )
 
     with override_settings(
         POLI_PAGE={
@@ -36,7 +39,6 @@ def test_render_getting_started_welcome_returns_pdf() -> None:
             {
                 "project": "getting-started",
                 "template": "welcome",
-                "version": "1.0.0",
                 "data": {"name": "django-poli-page integration test"},
             },
         )

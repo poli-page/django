@@ -6,17 +6,19 @@ from unittest.mock import MagicMock
 
 from django.test import override_settings
 
+from tests.keys import SANDBOX_KEY
+
 
 def test_build_client_passes_api_key_only_when_no_other_options(mocker: Any) -> None:
     fake_polipage_cls = mocker.patch("django_poli_page._client.PoliPage")
     from django_poli_page._client import _build_client
 
-    with override_settings(POLI_PAGE={"API_KEY": "pp_test_only"}):
+    with override_settings(POLI_PAGE={"API_KEY": SANDBOX_KEY}):
         _build_client()
 
     args, kwargs = fake_polipage_cls.call_args
     assert args == ()
-    assert kwargs["api_key"] == "pp_test_only"
+    assert kwargs["api_key"] == SANDBOX_KEY
     # Optional kwargs must be ABSENT when settings don't set them — never pass None.
     assert "base_url" not in kwargs
     assert "timeout" not in kwargs
@@ -30,7 +32,7 @@ def test_build_client_passes_all_options(mocker: Any) -> None:
 
     with override_settings(
         POLI_PAGE={
-            "API_KEY": "pp_test_full",
+            "API_KEY": SANDBOX_KEY,
             "BASE_URL": "https://api.example.com",
             "TIMEOUT": 42.0,
             "RETRIES": {"MAX_ATTEMPTS": 5, "DELAY_SECONDS": 0.1},
@@ -39,7 +41,7 @@ def test_build_client_passes_all_options(mocker: Any) -> None:
         _build_client()
 
     _, kwargs = fake_polipage_cls.call_args
-    assert kwargs["api_key"] == "pp_test_full"
+    assert kwargs["api_key"] == SANDBOX_KEY
     assert kwargs["base_url"] == "https://api.example.com"
     assert kwargs["timeout"] == 42.0
     assert kwargs["max_retries"] == 5
@@ -77,7 +79,7 @@ def test_user_on_retry_dotted_path_wins_over_default_bridge(mocker: Any) -> None
 
     with override_settings(
         POLI_PAGE={
-            "API_KEY": "pp_test_x",
+            "API_KEY": SANDBOX_KEY,
             "ON_RETRY": "myapp.callbacks.custom",
         },
     ):

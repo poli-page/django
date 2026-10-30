@@ -131,31 +131,19 @@ def test_pdf_stream_response_non_ascii_filename() -> None:
     assert "filename*=" in disposition.lower()
 
 
-def test_preview_response_html() -> None:
-    from poli_page import PreviewResult
+def test_preview_response_returns_document_preview_html() -> None:
+    from poli_page import DocumentPreviewResult
 
     from django_poli_page.http import preview_response
 
-    preview = PreviewResult(
-        html="<html><body>Hi</body></html>", total_pages=3, environment="sandbox"
-    )
+    preview = DocumentPreviewResult(html="<html><body>stored</body></html>", page_count=5)
     response = preview_response(preview)
 
     assert response.status_code == 200
     assert response["Content-Type"] == "text/html; charset=utf-8"
     assert response["Cache-Control"] == "private, no-store"
     assert response["X-Content-Type-Options"] == "nosniff"
-    assert response.content == b"<html><body>Hi</body></html>"
-
-
-def test_preview_response_accepts_document_preview_result() -> None:
-    from poli_page import DocumentPreviewResult
-
-    from django_poli_page.http import preview_response
-
-    preview = DocumentPreviewResult(html="<html>stored</html>", page_count=5)
-    response = preview_response(preview)
-    assert response.content == b"<html>stored</html>"
+    assert response.content == b"<html><body>stored</body></html>"
 
 
 def test_document_redirect_response_302() -> None:
@@ -178,3 +166,57 @@ def test_document_redirect_response_permanent_301() -> None:
     descriptor.presigned_pdf_url = "https://cdn.example/abc.pdf"
     response = document_redirect_response(descriptor, permanent=True)
     assert response.status_code == 301
+
+
+class _FakeStream:
+    """Stands in for the SDK's `client.render.pdf_stream(...)` context manager."""
+
+    def __init__(self, chunks: list[bytes], error: Exception | None = None) -> None:
+        self.chunks = chunks
+        self.error = error
+        self.entered = False
+        self.exited = 0
+
+    def __enter__(self) -> Iterator[bytes]:
+        self.entered = True
+        if self.error is not None:
+            raise self.error
+        return iter(self.chunks)
+
+    def __exit__(self, *exc: object) -> None:
+        self.exited += 1
+
+
+def test_pdf_stream_response_enters_an_sdk_stream_at_once() -> None:
+    from django_poli_page.http import pdf_stream_response
+
+    stream = _FakeStream([b"%PDF", b"-1.4"])
+    response = pdf_stream_response(stream, "s.pdf")
+
+    assert stream.entered
+    assert stream.exited == 0
+    assert b"".join(response.streaming_content) == b"%PDF-1.4"  # type: ignore[arg-type]
+    assert stream.exited == 1
+    response.close()
+    assert stream.exited == 1
+
+
+def test_pdf_stream_response_closes_an_unread_sdk_stream_with_the_response() -> None:
+    from django_poli_page.http import pdf_stream_response
+
+    stream = _FakeStream([b"%PDF"])
+    response = pdf_stream_response(stream, "s.pdf")
+    response.close()
+
+    assert stream.exited == 1
+
+
+def test_pdf_stream_response_raises_the_sdk_error_before_any_response() -> None:
+    from poli_page import PoliPageError
+
+    from django_poli_page.http import pdf_stream_response
+
+    error = PoliPageError("Failed to download PDF: HTTP 403", code="DOWNLOAD_FAILED", status=403)
+    with pytest.raises(PoliPageError) as raised:
+        pdf_stream_response(_FakeStream([], error), "s.pdf")
+    assert raised.value is error

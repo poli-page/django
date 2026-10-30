@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests import keys
+
 SECRET_KEY = "test-suite-not-secret"
 DEBUG = False
 DATABASES = {
@@ -15,5 +17,5 @@ INSTALLED_APPS = [
 USE_TZ = True
 
 POLI_PAGE = {
-    "API_KEY": "pp_test_unit_default",
+    "API_KEY": keys.SANDBOX_KEY,
 }
