@@ -17,9 +17,10 @@ INSTALLED_APPS = [
     "demo",
 ]
 
+# django-poli-page appends its error handler (PoliPageErrorMiddleware) at startup:
+# a PoliPageError raised by a view answers its to_payload() JSON.
 MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
-    "example_project.middleware.PoliPageErrorMiddleware",
 ]
 
 ROOT_URLCONF = "example_project.urls"
@@ -44,9 +45,8 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 POLI_PAGE = {
-    # When POLI_PAGE_API_KEY is unset, this stays None and AppConfig.ready()
-    # defers to the SDK's own env-var fallback (spec §6.2). Better than a raw
-    # KeyError at settings import.
+    # When POLI_PAGE_API_KEY is unset, this stays None and the SDK reads the
+    # env var itself. Better than a raw KeyError at settings import.
     "API_KEY": os.environ.get("POLI_PAGE_API_KEY"),
     "BASE_URL": os.environ.get("POLI_PAGE_BASE_URL"),
 }

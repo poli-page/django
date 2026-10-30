@@ -450,8 +450,9 @@
       <h2>Error handling <span class="label">04 · typed exceptions</span></h2>
       <p class="desc">
         Renders the template <code>does-not-exist</code> to trigger a 404
-        <code>TEMPLATE_NOT_FOUND</code>. The view catches <code>PoliPageError</code>
-        and returns its code, status, message, and request-id as JSON.
+        <code>TEMPLATE_NOT_FOUND</code>. The view does not catch it: the
+        django-poli-page error handler answers the error's code, message, status
+        and request-id as JSON.
       </p>
     </div>
     <div class="actions">

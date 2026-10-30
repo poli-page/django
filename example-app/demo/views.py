@@ -10,7 +10,7 @@ from pathlib import Path
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
-from poli_page import PoliPageError, RenderInput
+from poli_page import RenderInput
 from poli_page.fs import render_to_file as sdk_render_to_file
 
 from django_poli_page import client
@@ -108,26 +108,15 @@ def document_preview(request: HttpRequest, doc_id: str) -> HttpResponse:
     return preview_response(result)
 
 
-# Step 9: deliberate 404 TEMPLATE_NOT_FOUND (getting-started has no such template)
-def error_not_found(request: HttpRequest) -> JsonResponse:
-    try:
-        client.render.pdf(
-            {
-                "project": "getting-started",
-                "template": "does-not-exist",
-                "data": {},
-            }
-        )
-    except PoliPageError as exc:
-        payload = exc.to_payload()
-        return JsonResponse(
-            {
-                "caught": True,
-                "code": payload["code"],
-                "message": payload["message"],
-                "status": payload["status"],
-                "requestId": payload["requestId"],
-            },
-            status=payload["status"] or 500,
-        )
-    return JsonResponse({"caught": False, "note": "expected error, got success"}, status=500)
+# Step 9: deliberate 404 TEMPLATE_NOT_FOUND (getting-started has no such template).
+# No try/except: the PoliPageError reaches django-poli-page's error handler, which
+# answers 404 with the error's to_payload() body.
+def error_not_found(request: HttpRequest) -> HttpResponse:
+    pdf = client.render.pdf(
+        {
+            "project": "getting-started",
+            "template": "does-not-exist",
+            "data": {},
+        }
+    )
+    return pdf_response(pdf, "does-not-exist.pdf", as_attachment=False)
