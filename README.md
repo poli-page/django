@@ -212,7 +212,7 @@ uv run python manage.py runserver
 
 | Package version | Django | Python |
 |---|---|---|
-| 0.1.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS, 6.0 | 3.11, 3.12, 3.13 (Django 6.0: 3.12+) |
+| 0.11.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS, 6.0 | 3.11, 3.12, 3.13 (Django 6.0: 3.12+) |
 
 The package follows the Django supported-versions policy; releases drop a Django row when upstream marks it end-of-life.
 
