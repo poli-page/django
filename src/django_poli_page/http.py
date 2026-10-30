@@ -1,8 +1,7 @@
 """HTTP response helpers — pure transformations from SDK output to Django responses.
 
-Spec §8. These helpers DO NOT catch PoliPageError; users handle exceptions in
-their views (per-view try/except, middleware, or DRF handler). See spec §10.5
-for the rationale (delta from nextjs/nestjs).
+These helpers do not catch `PoliPageError`: a view lets it propagate to the
+error handler (`django_poli_page.middleware`, on by default) or catches it itself.
 """
 
 from __future__ import annotations

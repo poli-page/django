@@ -11,6 +11,9 @@ from urllib.parse import urlparse
 from django.apps import AppConfig
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.core.signals import setting_changed
+
+from django_poli_page.middleware import MIDDLEWARE_PATH
 
 # The SDK contract's full-key regex `^pp_{env}_{32 hex}$`, where {env} starts with
 # a letter, then lowercase letters, digits and single inner hyphens, at most 20
@@ -18,7 +21,16 @@ from django.core.exceptions import ImproperlyConfigured
 # newline).
 _API_KEY_RE = re.compile(r"pp_(?=[a-z][a-z0-9-]{0,19}_)[a-z][a-z0-9]*(?:-[a-z0-9]+)*_[0-9a-f]{32}")
 _KNOWN_KEYS = frozenset(
-    {"API_KEY", "BASE_URL", "TIMEOUT", "RETRIES", "ON_RETRY", "ON_ERROR", "HTTP_CLIENT"}
+    {
+        "API_KEY",
+        "BASE_URL",
+        "TIMEOUT",
+        "RETRIES",
+        "ON_RETRY",
+        "ON_ERROR",
+        "HTTP_CLIENT",
+        "ERROR_HANDLER",
+    }
 )
 _KNOWN_RETRY_KEYS = frozenset({"MAX_ATTEMPTS", "DELAY_SECONDS"})
 
@@ -40,6 +52,9 @@ class PoliPageConfig(AppConfig):
             raise ImproperlyConfigured("POLI_PAGE must be a dict.")
 
         self._validate(cfg)
+        if cfg.get("ERROR_HANDLER", True):
+            _install_error_handler()
+        setting_changed.connect(_reset_client_on_change, dispatch_uid="django_poli_page.client")
 
     def _validate(self, cfg: dict[str, Any]) -> None:
         api_key = cfg.get("API_KEY")
@@ -63,6 +78,10 @@ class PoliPageConfig(AppConfig):
                 raise ImproperlyConfigured(
                     f"POLI_PAGE['BASE_URL'] must use http or https scheme. Got: {base_url!r}",
                 )
+
+        error_handler = cfg.get("ERROR_HANDLER")
+        if error_handler is not None and not isinstance(error_handler, bool):
+            raise ImproperlyConfigured("POLI_PAGE['ERROR_HANDLER'] must be True or False.")
 
         timeout = cfg.get("TIMEOUT")
         if timeout is not None:
@@ -117,3 +136,21 @@ def _warn_if_malformed(api_key: str, label: str) -> None:
             "starting anyway, the API decides whether it is valid.",
             stacklevel=3,
         )
+
+
+def _install_error_handler() -> None:
+    # Appended, so it is the innermost middleware: its process_exception() sees
+    # a view's PoliPageError first. Django builds the middleware chain after
+    # ready() (WSGI/ASGI handlers, the test client), so the change takes effect.
+    middleware = list(getattr(settings, "MIDDLEWARE", None) or [])
+    if MIDDLEWARE_PATH not in middleware:
+        settings.MIDDLEWARE = [*middleware, MIDDLEWARE_PATH]
+
+
+def _reset_client_on_change(*, setting: str, **kwargs: Any) -> None:
+    # override_settings(POLI_PAGE=...) in a test: the next access to
+    # `django_poli_page.client` builds a client from the new settings.
+    if setting == "POLI_PAGE":
+        from django_poli_page._client import reset_client
+
+        reset_client()

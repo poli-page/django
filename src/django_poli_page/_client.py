@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from django.utils.functional import SimpleLazyObject
+from django.utils.functional import SimpleLazyObject, empty
 from django.utils.module_loading import import_string
 from poli_page import PoliPage
 
@@ -59,5 +59,19 @@ def _build_client() -> PoliPage:
     return PoliPage(**kwargs)
 
 
-client: PoliPage = cast(PoliPage, SimpleLazyObject(_build_client))
+_lazy_client = SimpleLazyObject(_build_client)
+
+client: PoliPage = cast(PoliPage, _lazy_client)
 """Process-wide PoliPage singleton, built lazily on first attribute access."""
+
+
+def reset_client() -> None:
+    """Forget the built client: the next access to `client` builds one from the settings.
+
+    Called when `POLI_PAGE` changes (`override_settings`), so tests can point the
+    client at another `BASE_URL` or key.
+    """
+    built = _lazy_client._wrapped
+    _lazy_client._wrapped = empty
+    if built is not empty:
+        built.close()
