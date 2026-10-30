@@ -1,7 +1,6 @@
 """Unit-test conftest — snapshots global handler / signal-receiver state per test.
 
-Carries the pattern from symfony-bundle/tests/RestoresGlobalHandlers.php and
-nextjs/tests/setup.ts. Documented in INTEGRATIONS_PLAN.md §4.
+The same pattern as the other Poli Page integrations' test setup.
 """
 
 from __future__ import annotations
