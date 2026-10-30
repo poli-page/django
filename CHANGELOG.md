@@ -13,6 +13,7 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 - Contract tests: `example-app/tests/test_contract.py` runs the API contract's integration cases (`impl.*`) against the example app. CI runs them against the pinned `poli-page/api-contract` v1.3.0, and Dependabot proposes each new contract version.
 
 ### Changed
+- CI: the live API job runs on `main` (and on demand) against the production API with the sandbox key from the `POLI_PAGE_API_KEY` secret, and skips with a notice when the key is absent or not a `pp_sandbox_` key.
 - **Breaking:** API keys are per environment (`pp_sandbox_…`, `pp_live_…`, or `pp_{environment}_…` for an environment created on Pro+). `AppConfig.ready()` no longer raises `ImproperlyConfigured` on a key that does not start with `pp_test_` or `pp_live_`. A missing `POLI_PAGE` setting or an empty `API_KEY` still raises. Any other key that does not match `pp_{environment}_{32 lowercase hex}` now emits one warning, which shows no part of the key (not even its `pp_{environment}_` prefix), and the app starts anyway: the API decides whether the key is valid. When `API_KEY` is absent, the `POLI_PAGE_API_KEY` env var the SDK falls back to gets the same check.
 - **Breaking:** renders carry no template version. The API key's environment selects the published copy of the project. `manage.py poli_page_render` takes `--project` and `--template` and sends a `RenderInput` with no `version`.
 - **Breaking:** `preview_response` accepts only a `DocumentPreviewResult` (from `client.documents.preview(id)`).

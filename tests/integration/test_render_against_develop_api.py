@@ -1,4 +1,4 @@
-"""One smoke integration test that hits the develop API.
+"""One smoke integration test that hits the live API (the SDK default base URL).
 
 Skipped when POLI_PAGE_API_KEY is unset. Runs only with a pp_sandbox_ key: every
 other environment (live, or one created on Pro+) counts renders toward the
@@ -16,7 +16,7 @@ from django.test import override_settings
 @pytest.mark.integration
 @pytest.mark.skipif(
     not os.environ.get("POLI_PAGE_API_KEY"),
-    reason="POLI_PAGE_API_KEY not set; skipping develop-API integration test.",
+    reason="POLI_PAGE_API_KEY not set; skipping the live API integration test.",
 )
 def test_render_getting_started_welcome_returns_pdf() -> None:
     api_key = os.environ["POLI_PAGE_API_KEY"]
@@ -28,7 +28,6 @@ def test_render_getting_started_welcome_returns_pdf() -> None:
     with override_settings(
         POLI_PAGE={
             "API_KEY": api_key,
-            "BASE_URL": os.environ.get("POLI_PAGE_TEST_BASE_URL"),
             "TIMEOUT": 30.0,
         },
     ):
