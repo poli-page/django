@@ -15,78 +15,59 @@ jobs:
         exclude:
           - { python: "3.11", django: "5.2" }   # 5.2 LTS requires Python 3.12+
           - { python: "3.13", django: "4.2" }   # 4.2 LTS doesn't support 3.13
-    defaults:
-      run:
-        working-directory: django
+    env:
+      UV_PYTHON: ${{ matrix.python }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: django
-      # poli-page isn't on PyPI yet; the editable `../sdk-python` source in
-      # pyproject.toml resolves against this sibling checkout. Remove once the
-      # SDK publishes and the `poli-page>=0.9,<2` dep resolves from PyPI.
-      - uses: actions/checkout@v4
-        with:
-          repository: poli-page/sdk-python
-          path: sdk-python
-          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
       - uses: astral-sh/setup-uv@v3
+      # Strict: a failed install fails the job. --locked fails on a stale uv.lock.
       - name: Install
         run: |
-          if [ -f pyproject.toml ]; then
-            uv sync --all-extras
-            uv pip install "django~=${{ matrix.django }}.0"
-          else
-            echo "Skipping install: no pyproject.toml yet"
-          fi
+          uv sync --all-extras --locked
+          uv pip install "django~=${{ matrix.django }}.0"
+      # Every `uv run` in the package uses --no-sync: a plain `uv run` re-syncs the
+      # venv to uv.lock and silently replaces the matrix Django with the locked one.
+      - name: Django version under test
+        run: uv run --no-sync python -c "import django; print('Django', django.get_version())"
       - name: Lint
-        run: |
-          if [ -f pyproject.toml ]; then
-            uv run ruff check .
-          else
-            echo "Skipping lint: no pyproject.toml yet"
-          fi
+        run: uv run --no-sync ruff check .
       - name: Format
-        run: |
-          if [ -f pyproject.toml ]; then
-            uv run ruff format --check .
-          else
-            echo "Skipping format: no pyproject.toml yet"
-          fi
+        run: uv run --no-sync ruff format --check .
       - name: Type check
-        run: |
-          if [ -f pyproject.toml ] && [ -d src/django_poli_page ]; then
-            uv run mypy src tests
-          else
-            echo "Skipping mypy: no src/django_poli_page yet"
-          fi
+        run: uv run --no-sync mypy src tests example-app/tests
+      - name: API contract
+        id: contract
+        uses: poli-page/api-contract@0eba96c1ecf9a28b7e259f444f3ca5b7c059d5fd # v1.3.0
       - name: Unit tests
+        env:
+          POLI_CONTRACT: ${{ steps.contract.outputs.path }}
+        run: uv run --no-sync pytest tests/unit -v
+      # The example app is its own uv project (Django 5+, its own uv.lock) with the
+      # package installed from this checkout.
+      - name: Example app install
+        working-directory: example-app
         run: |
-          if [ -d tests/unit ] && [ -n "$(find tests/unit -name 'test_*.py' 2>/dev/null)" ]; then
-            uv run pytest tests/unit -v
-          else
-            echo "Skipping tests: no tests/unit/test_*.py yet"
-          fi
+          uv sync --locked
+          uv run python manage.py check
+      - name: Contract tests (example app)
+        # tests/test_contract.py runs the contract's impl cases against the example app.
+        # With CI set it fails, never skips, when POLI_CONTRACT is missing.
+        working-directory: example-app
+        env:
+          CI: "true"
+          POLI_CONTRACT: ${{ steps.contract.outputs.path }}
+        run: |
+          test -s "$POLI_CONTRACT" || { echo "::error::API contract file missing: '$POLI_CONTRACT'"; exit 1; }
+          uv run pytest -v -rs
 
   integration:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    defaults:
-      run:
-        working-directory: django
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: django
-      # See the test job: resolve the unpublished SDK from the sibling checkout.
-      - uses: actions/checkout@v4
-        with:
-          repository: poli-page/sdk-python
-          path: sdk-python
-          ref: main
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - uses: astral-sh/setup-uv@v3
