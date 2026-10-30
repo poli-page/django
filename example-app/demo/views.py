@@ -5,10 +5,9 @@ One view per step of the nine-step demo contract in poli-page/django#2.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from poli_page import RenderInput
 from poli_page.fs import render_to_file as sdk_render_to_file
@@ -40,12 +39,11 @@ def render_pdf(request: HttpRequest) -> HttpResponse:
 
 
 # Step 2: render.pdf_stream
-def render_stream(request: HttpRequest) -> HttpResponse:
-    def chunks() -> Iterator[bytes]:
-        with client.render.pdf_stream(PROJECT_INPUT) as stream:
-            yield from stream
-
-    return pdf_stream_response(chunks(), "welcome-streamed.pdf", as_attachment=False)
+# The SDK stream goes to the helper as is: the render and the download start in the
+# view, so an SDK error reaches the error handler instead of a committed 200 PDF.
+def render_stream(request: HttpRequest) -> StreamingHttpResponse:
+    stream = client.render.pdf_stream(PROJECT_INPUT)
+    return pdf_stream_response(stream, "welcome-streamed.pdf", as_attachment=False)
 
 
 # Step 3: render_to_file

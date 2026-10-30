@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Iterator
+from contextlib import AbstractContextManager
 from urllib.parse import quote
 
 from django.http import (
@@ -34,14 +35,48 @@ def pdf_response(
     return response
 
 
+class _OpenedStream:
+    """The chunks of an SDK stream entered at once; exhausting or closing them exits it.
+
+    Django calls `close()` when it is done with the response, iterated or not.
+    """
+
+    def __init__(self, stream: AbstractContextManager[Iterator[bytes]]) -> None:
+        self._stream = stream
+        self._chunks = iter(stream.__enter__())
+        self._open = True
+
+    def __iter__(self) -> Iterator[bytes]:
+        return self
+
+    def __next__(self) -> bytes:
+        try:
+            return next(self._chunks)
+        except BaseException:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        if self._open:
+            self._open = False
+            self._stream.__exit__(None, None, None)
+
+
 def pdf_stream_response(
-    chunks: Iterable[bytes] | Iterator[bytes],
+    chunks: AbstractContextManager[Iterator[bytes]] | Iterable[bytes],
     filename: str = "document.pdf",
     *,
     as_attachment: bool = True,
 ) -> StreamingHttpResponse:
-    """Stream chunks of a PDF directly to the client."""
-    response = StreamingHttpResponse(chunks, content_type="application/pdf")
+    """Stream a PDF to the client.
+
+    Pass the SDK's stream as is: `pdf_stream_response(client.render.pdf_stream(input))`.
+    The render and the download start here, in the view, so a `PoliPageError` raises
+    before the response exists and reaches the error handler. The stream is closed when
+    the response is done. Any other iterable of bytes is streamed as given.
+    """
+    content = _OpenedStream(chunks) if isinstance(chunks, AbstractContextManager) else chunks
+    response = StreamingHttpResponse(content, content_type="application/pdf")
     response["Content-Disposition"] = _build_disposition(filename, as_attachment)
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
