@@ -4,13 +4,23 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-30
+
+First release. The version matches the `poli-page` SDK 0.11.0 it requires.
+
 ### Added
-- Initial release scaffolding.
+- Django AppConfig with `settings.POLI_PAGE` validation at startup.
+- Lazy singleton `django_poli_page.client` (SimpleLazyObject) wrapping the SDK's `PoliPage`.
+- HTTP response helpers: `pdf_response`, `pdf_stream_response`, `preview_response`, `document_redirect_response`.
+- Django signals (`poli_page_retry`, `poli_page_error`) bridging the SDK's `on_retry` / `on_error` hooks.
+- `manage.py poli_page_render` management command for end-to-end smoke testing.
+- Example Django 5 project at `example-app/` covering the SDK demo steps, with an interactive dashboard at `/`.
 - Error handler, on by default: at startup the app appends `django_poli_page.middleware.PoliPageErrorMiddleware` to `MIDDLEWARE`. A `PoliPageError` a view does not catch answers `application/json` with the SDK's `to_payload()` body, `{code, message, status, requestId}`, and its `status` (`503` for `network_error`, `504` for `timeout`, `500` when the error has none). Set `POLI_PAGE["ERROR_HANDLER"] = False` to turn it off.
 - `pdf_stream_response` accepts the SDK stream as is (`pdf_stream_response(client.render.pdf_stream(input))`): it enters the stream at once, so a render or download error raises in the view and reaches the error handler, and closes it when the response is done. Any iterable of bytes is still accepted.
 - Django 6.0 support: classifier and CI legs (Python 3.12+). CI now also runs Django 5.2 on Python 3.11.
 - A change of the `POLI_PAGE` setting (`override_settings` in tests) resets the lazy `client`, so the next access builds it from the new settings.
 - Contract tests: `example-app/tests/test_contract.py` runs the API contract's integration cases (`impl.*`) against the example app. CI runs them against the pinned `poli-page/api-contract` v1.3.0, and Dependabot proposes each new contract version.
+- Release workflow (`.github/workflows/release.yml`): a `vX.Y.Z` tag runs the test suite against the pinned API contract, publishes the wheel and sdist to PyPI through Trusted Publishing, and creates the GitHub Release. See `RELEASING.md`.
 
 ### Changed
 - CI: the live API job runs on `main` (and on demand) against the production API with the sandbox key from the `POLI_PAGE_API_KEY` secret, and skips with a notice when the key is absent or not a `pp_sandbox_` key.
@@ -30,15 +40,5 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 ### Fixed
 - `pdf_response` / `pdf_stream_response`: the `Content-Disposition` filename is now escaped per RFC 6266 / RFC 9110 (`\` and `"` as quoted-pairs, ASCII fallback included) and stripped of control characters (CR/LF, TAB, DEL, C1), so a filename can no longer break the header or inject parameters.
 
-## [0.1.0] — TBD
-
-### Added
-- Django AppConfig with `settings.POLI_PAGE` validation at startup.
-- Lazy singleton `django_poli_page.client` (SimpleLazyObject) wrapping the SDK's `PoliPage`.
-- HTTP response helpers: `pdf_response`, `pdf_stream_response`, `preview_response`, `document_redirect_response`.
-- Django signals (`poli_page_retry`, `poli_page_error`) bridging the SDK's `on_retry` / `on_error` hooks.
-- `manage.py poli_page_render` management command for end-to-end smoke testing.
-- Example Django 5 project at `example-app/` covering all 10 SDK demo steps, with an interactive dashboard at `/`.
-
-[Unreleased]: https://github.com/poli-page/django/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/poli-page/django/releases/tag/v0.1.0
+[Unreleased]: https://github.com/poli-page/django/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/poli-page/django/releases/tag/v0.11.0
