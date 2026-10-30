@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
 import pytest
-from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest, HttpResponse
@@ -162,7 +162,10 @@ def test_handler_answers_the_error_payload(kind: str, status: int, body: dict[st
 
 @override_settings(ROOT_URLCONF=__name__)
 def test_handler_answers_an_async_view_error() -> None:
-    response = async_to_sync(AsyncClient().get)("/async/api")
+    async def call() -> Any:
+        return await AsyncClient().get("/async/api")
+
+    response = asyncio.run(call())
 
     assert response.status_code == 404
     assert response["Content-Type"] == "application/json"
