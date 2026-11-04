@@ -37,10 +37,14 @@ PINNING_WORKFLOW = WORKFLOWS / "ci.yml"
 DEFAULT_REMOTE = "https://github.com/poli-page/api-contract.git"
 SDK = "poli-page"
 
-# `uses: poli-page/api-contract@<ref>` on a line that is not a YAML comment.
-_PIN = re.compile(r"^\s*(?:-\s+)?uses:\s*poli-page/api-contract@(\S+)")
+# `uses: poli-page/api-contract@<ref>`, bare or in single or double quotes, on a line that
+# is not a YAML comment.
+_PIN = re.compile(r"""^\s*(?:-\s+)?uses:\s*(["']?)poli-page/api-contract@([^\s"'#]+)\1(?:\s|$)""")
+# Any `uses:` line that names the contract action, read or not by `_PIN`.
+_MENTION = re.compile(r"uses:.*poli-page/api-contract@")
 _SHA = re.compile(r"[0-9a-f]{40}")
-_STABLE_TAG = re.compile(r"v([0-9]+)\.([0-9]+)\.([0-9]+)")
+# SemVer numbers: no leading zeros (`v00.13.0` is not a stable tag).
+_STABLE_TAG = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 
 
 class CheckError(Exception):
@@ -207,8 +211,19 @@ def main(argv: list[str]) -> int:
 
 
 def _pins(workflow: Path) -> list[str]:
-    lines = workflow.read_text(encoding="utf-8").splitlines()
-    return [m.group(1) for m in map(_PIN.match, lines) if m]
+    """The contract refs a workflow pins; a `uses:` line naming the contract in any other shape
+    fails, so that no pin goes unchecked."""
+    pins: list[str] = []
+    for number, line in enumerate(workflow.read_text(encoding="utf-8").splitlines(), 1):
+        if line.lstrip().startswith("#") or not _MENTION.search(line):
+            continue
+        match = _PIN.match(line)
+        if match is None:
+            raise CheckError(
+                f"{workflow.name}:{number}: cannot read the API contract pin: '{line.strip()}'"
+            )
+        pins.append(match.group(2))
+    return pins
 
 
 def _plain_release(specifier: Specifier) -> tuple[int, ...] | None:

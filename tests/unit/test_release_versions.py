@@ -100,10 +100,18 @@ def test_stable_tags_on_the_commit() -> None:
             f"{SHA}\trefs/tags/v0.13.0.1",
             f"{SHA}\trefs/heads/v0.14.0",
             f"{OTHER_SHA}\trefs/tags/v0.11.0",
+            f"{SHA}\trefs/tags/v00.13.0",
+            f"{SHA}\trefs/tags/v0.013.0",
+            f"{SHA}\trefs/tags/v0.13.00",
         ]
     )
 
     assert crv.stable_tags(ls_remote, SHA) == ["v0.12.0", "v0.13.0"]
+
+
+def test_a_tag_with_leading_zeros_is_not_stable() -> None:
+    with pytest.raises(crv.CheckError, match="has no stable"):
+        crv.check_contract("0.13.0", (0, 13), f"{SHA}\trefs/tags/v00.13.0^{{}}", SHA)
 
 
 def test_contract_of_the_minor_passes(capsys: pytest.CaptureFixture[str]) -> None:
@@ -244,3 +252,47 @@ def test_the_repository_requires_the_sdk_of_its_own_minor(
 ) -> None:
     # The real manifests, against _version.py: they move together.
     crv.check_sdk(__version__, crv.release_minor(__version__))
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        f'      - uses: "poli-page/api-contract@{OTHER_SHA}" # v0.13.0\n',
+        f"      - uses: 'poli-page/api-contract@{OTHER_SHA}'\n",
+        f"        uses: poli-page/api-contract@{OTHER_SHA}\n",
+    ],
+    ids=["double-quoted", "single-quoted", "bare"],
+)
+def test_main_reads_a_quoted_pin_in_the_release_workflow(
+    repo: Path, capsys: pytest.CaptureFixture[str], line: str
+) -> None:
+    (repo / ".github" / "workflows" / "release.yml").write_text(f"jobs:\n  x:\n    steps:\n{line}")
+
+    assert "release.yml pins the API contract 0eba96c1, but ci.yml pins 1f705b3c" in _fails(
+        capsys, ["v0.13.0"]
+    )
+
+
+def test_main_reads_a_quoted_pin_in_ci(repo: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    for name in ("ci.yml", "release.yml"):
+        (repo / ".github" / "workflows" / name).write_text(
+            f'jobs:\n  x:\n    steps:\n      - uses: "poli-page/api-contract@{SHA}"\n'
+        )
+
+    assert crv.main(["v0.13.0"]) == 0
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        f"      - uses: \"poli-page/api-contract@{OTHER_SHA}'\n",
+        f"      - {{ uses: poli-page/api-contract@{OTHER_SHA} }}\n",
+    ],
+    ids=["mismatched-quotes", "flow-mapping"],
+)
+def test_main_refuses_a_pin_it_cannot_read(
+    repo: Path, capsys: pytest.CaptureFixture[str], line: str
+) -> None:
+    (repo / ".github" / "workflows" / "release.yml").write_text(f"jobs:\n  x:\n    steps:\n{line}")
+
+    assert "release.yml:4: cannot read the API contract pin" in _fails(capsys, ["v0.13.0"])

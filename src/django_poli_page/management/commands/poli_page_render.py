@@ -1,8 +1,11 @@
 """poli_page_render: smoke-test the Django integration end-to-end.
 
-Renders a PDF using the lazy client, writes it to disk, and surfaces
-PoliPageError families via mapped exit codes. The API key's environment selects
-the published copy of the project that gets rendered.
+Renders a PDF using the lazy client, writes it to disk with the SDK's
+`render_to_file()`, and surfaces PoliPageError families via mapped exit codes.
+The target is checked before the render (a directory or an unwritable file is
+refused with `io_error`) and replaced atomically once the PDF is complete.
+The API key's environment selects the published copy of the project that
+gets rendered.
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ from poli_page import (
     PoliPageError,
     RenderInput,
 )
+from poli_page.fs import render_to_file
 
 from django_poli_page._client import client
 
@@ -60,17 +64,14 @@ class Command(BaseCommand):
             "data": data,
         }
 
-        start = time.perf_counter()
-        pdf = client.render.pdf(input_payload)
-        elapsed_ms = int((time.perf_counter() - start) * 1000)
-
         output = Path(options["output"])
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_bytes(pdf)
+        start = time.perf_counter()
+        render_to_file(client, input_payload, output)
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Rendered {len(pdf)} bytes in {elapsed_ms}ms. Wrote to {output}.",
+                f"Rendered {output.stat().st_size} bytes in {elapsed_ms}ms. Wrote to {output}.",
             ),
         )
 
