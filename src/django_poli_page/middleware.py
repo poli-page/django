@@ -6,7 +6,8 @@ the app is installed. The answer is the SDK's canonical payload:
 
 - body: `error.to_payload()`, exactly `{"code", "message", "status", "requestId"}`;
 - status: the payload's `status` (the API's status, 503 for `network_error`,
-  504 for `timeout`), or 500 when the error has none.
+  504 for `timeout`, 502 for `invalid_response`), or 500 when the error has none
+  (`invalid_options`, `io_error`).
 
 Exceptions that are not a `PoliPageError` go on to Django's own handling.
 """
