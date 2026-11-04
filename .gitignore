@@ -46,3 +46,4 @@ docs/spec/
 
 # Docs site
 docs/.astro/
+coverage.xml
