@@ -51,7 +51,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://poli.page"
-Documentation = "https://docs.poli.page/reference/sdk/python/"
+Documentation = "https://poli-page.github.io/django/"
 Source = "https://github.com/poli-page/django"
 Issues = "https://github.com/poli-page/django/issues"
 Changelog = "https://github.com/poli-page/django/blob/main/CHANGELOG.md"
