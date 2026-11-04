@@ -219,7 +219,7 @@ uv run python manage.py runserver
 ## Going further
 
 - Streaming large PDFs through `pdf_stream_response`: [Responses](https://poli-page.github.io/django/concepts/responses/).
-- Document workflow: create, fetch, thumbnails, presigned-URL redirects: [Responses](https://poli-page.github.io/django/concepts/responses/).
+- Document workflow: create, fetch and thumbnails are SDK calls, see the [Python SDK documentation](https://poli-page.github.io/sdk-python/); presigned-URL redirects and previews: [Responses](https://poli-page.github.io/django/concepts/responses/).
 - Signals: wiring `poli_page_retry` and `poli_page_error` into logging or metrics: [Observability](https://poli-page.github.io/django/production/observability/).
 - Swapping the underlying `httpx.Client` for connection-pool tuning or instrumentation: [Configuration](https://poli-page.github.io/django/concepts/configuration/).
 
