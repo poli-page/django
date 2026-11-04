@@ -1,6 +1,21 @@
 # django-poli-page
 
+[![Pypi](https://img.shields.io/pypi/v/django-poli-page?style=flat&logo=python&logoColor=ffffff&label=Pypi&cacheSeconds=3600)](https://pypi.org/project/django-poli-page/)
+[![Downloads](https://img.shields.io/pypi/dm/django-poli-page?style=flat&logo=python&logoColor=ffffff&label=Downloads&cacheSeconds=3600)](https://pypi.org/project/django-poli-page/)
+[![Ci](https://img.shields.io/github/actions/workflow/status/poli-page/django/ci.yml?branch=main&style=flat&logo=githubactions&logoColor=ffffff&label=Ci)](https://github.com/poli-page/django/actions/workflows/ci.yml)
+[![Codeql](https://img.shields.io/github/actions/workflow/status/poli-page/django/codeql.yml?branch=main&style=flat&logo=github&logoColor=ffffff&label=Codeql)](https://github.com/poli-page/django/actions/workflows/codeql.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/poli-page/django?style=flat&logo=codecov&logoColor=ffffff&label=Coverage)](https://codecov.io/gh/poli-page/django)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue?style=flat&logo=python&logoColor=ffffff)](https://github.com/poli-page/django)
+[![Django](https://img.shields.io/badge/Django-4.2%20%7C%205.0%20%7C%205.1%20%7C%205.2%20%7C%206.0-blue?style=flat&logo=django&logoColor=ffffff)](https://www.djangoproject.com/)
+[![Types](https://img.shields.io/badge/Types-py.typed-blue?style=flat&logo=python&logoColor=ffffff)](https://peps.python.org/pep-0561/)
+[![Linter](https://img.shields.io/badge/Linter-Ruff-blue?style=flat&logo=python&logoColor=ffffff)](https://github.com/astral-sh/ruff)
+[![Deps](https://img.shields.io/badge/Deps-up%20to%20date-brightgreen?style=flat&logo=python&logoColor=ffffff)](https://github.com/poli-page/django/network/dependencies)
+[![Docs](https://img.shields.io/badge/Docs-online-brightgreen?style=flat&logo=readthedocs&logoColor=ffffff)](https://poli-page.github.io/django/)
+[![License](https://img.shields.io/github/license/poli-page/django?style=flat&logo=gnu&logoColor=ffffff&label=License)](LICENSE)
+
 > Render Poli Page documents as Django HTTP responses.
+
+→ **Documentation**: https://poli-page.github.io/django/
 
 ## About
 
@@ -203,10 +218,10 @@ uv run python manage.py runserver
 
 ## Going further
 
-- Streaming large PDFs through `pdf_stream_response` — forthcoming in `docs/streaming.md`.
-- Document workflow: create, fetch, thumbnails, presigned-URL redirects — forthcoming in `docs/documents.md`.
-- Signals: wiring `poli_page_retry` and `poli_page_error` into logging or metrics — forthcoming in `docs/signals.md`.
-- Swapping the underlying `httpx.Client` for connection-pool tuning or instrumentation — forthcoming in `docs/http-client.md`.
+- Streaming large PDFs through `pdf_stream_response`: [Responses](https://poli-page.github.io/django/concepts/responses/).
+- Document workflow: create, fetch, thumbnails, presigned-URL redirects: [Responses](https://poli-page.github.io/django/concepts/responses/).
+- Signals: wiring `poli_page_retry` and `poli_page_error` into logging or metrics: [Observability](https://poli-page.github.io/django/production/observability/).
+- Swapping the underlying `httpx.Client` for connection-pool tuning or instrumentation: [Configuration](https://poli-page.github.io/django/concepts/configuration/).
 
 ## Compatibility
 
