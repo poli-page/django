@@ -46,7 +46,8 @@ class PoliPageConfig(AppConfig):
         if cfg is None:
             raise ImproperlyConfigured(
                 "Set POLI_PAGE = {'API_KEY': 'pp_sandbox_...'} in your settings module. "
-                "See https://poli-page.github.io/django/concepts/configuration/ for the full schema.",
+                "See https://poli-page.github.io/django/concepts/configuration/ "
+                "for the full schema.",
             )
         if not isinstance(cfg, dict):
             raise ImproperlyConfigured("POLI_PAGE must be a dict.")
