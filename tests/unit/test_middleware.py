@@ -15,6 +15,7 @@ from django.urls import path
 from poli_page import (
     APIConnectionError,
     APITimeoutError,
+    InvalidResponseError,
     NotFoundError,
     PoliPageError,
 )
@@ -32,6 +33,17 @@ ERRORS: dict[str, PoliPageError] = {
     "network": APIConnectionError("Network request failed", code="network_error"),
     "timeout": APITimeoutError("Request timed out after 60000ms", code="timeout"),
     "no-status": PoliPageError("apiKey is required", code="invalid_options"),
+    # A proxy answered the render with a 200 HTML page: the error keeps the real 2xx,
+    # its to_payload() answers 502.
+    "invalid-response": InvalidResponseError(
+        "Invalid response: HTTP 200 body is not JSON",
+        code="invalid_response",
+        status=200,
+        request_id="req_proxy",
+    ),
+    "io-error": PoliPageError(
+        "Failed to write PDF: out/welcome.pdf: Permission denied", code="io_error"
+    ),
 }
 
 
@@ -147,6 +159,28 @@ def test_error_handler_must_be_a_bool(value: Any) -> None:
                 "requestId": None,
             },
             id="no-status",
+        ),
+        pytest.param(
+            "invalid-response",
+            502,
+            {
+                "code": "invalid_response",
+                "message": "Invalid response: HTTP 200 body is not JSON",
+                "status": 502,
+                "requestId": "req_proxy",
+            },
+            id="invalid_response",
+        ),
+        pytest.param(
+            "io-error",
+            500,
+            {
+                "code": "io_error",
+                "message": "Failed to write PDF: out/welcome.pdf: Permission denied",
+                "status": None,
+                "requestId": None,
+            },
+            id="io_error",
         ),
     ],
 )

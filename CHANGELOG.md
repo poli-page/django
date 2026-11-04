@@ -4,12 +4,9 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 
 ## [Unreleased]
 
-### Changed
-- The live API CI job passes the optional `POLI_PAGE_BASE_URL` secret to the integration test (unset: the SDK default), next to the `pp_sandbox_` key in `POLI_PAGE_API_KEY`.
+## [0.13.0] - 2026-11-04
 
-## [0.11.0] - 2026-10-30
-
-First release. The version matches the `poli-page` SDK 0.11.0 it requires.
+First release on PyPI. It requires the `poli-page` SDK 0.13 and passes the Poli Page API contract v0.13.0. The package shares its major.minor with the Poli Page API, so its first version is 0.13.0; a 0.11.0 was prepared and never published. The Changed, Removed and Fixed entries below describe changes made during that line.
 
 ### Added
 - Django AppConfig with `settings.POLI_PAGE` validation at startup.
@@ -18,20 +15,22 @@ First release. The version matches the `poli-page` SDK 0.11.0 it requires.
 - Django signals (`poli_page_retry`, `poli_page_error`) bridging the SDK's `on_retry` / `on_error` hooks.
 - `manage.py poli_page_render` management command for end-to-end smoke testing.
 - Example Django 5 project at `example-app/` covering the SDK demo steps, with an interactive dashboard at `/`.
-- Error handler, on by default: at startup the app appends `django_poli_page.middleware.PoliPageErrorMiddleware` to `MIDDLEWARE`. A `PoliPageError` a view does not catch answers `application/json` with the SDK's `to_payload()` body, `{code, message, status, requestId}`, and its `status` (`503` for `network_error`, `504` for `timeout`, `500` when the error has none). Set `POLI_PAGE["ERROR_HANDLER"] = False` to turn it off.
+- Error handler, on by default: at startup the app appends `django_poli_page.middleware.PoliPageErrorMiddleware` to `MIDDLEWARE`. A `PoliPageError` a view does not catch answers `application/json` with the SDK's `to_payload()` body, `{code, message, status, requestId}`, and its `status` (`503` for `network_error`, `504` for `timeout`, `502` for `invalid_response`, `500` when the SDK knows no status, as for `invalid_options` and `io_error`). Set `POLI_PAGE["ERROR_HANDLER"] = False` to turn it off.
 - `pdf_stream_response` accepts the SDK stream as is (`pdf_stream_response(client.render.pdf_stream(input))`): it enters the stream at once, so a render or download error raises in the view and reaches the error handler, and closes it when the response is done. Any iterable of bytes is still accepted.
 - Django 6.0 support: classifier and CI legs (Python 3.12+). CI now also runs Django 5.2 on Python 3.11.
 - A change of the `POLI_PAGE` setting (`override_settings` in tests) resets the lazy `client`, so the next access builds it from the new settings.
-- Contract tests: `example-app/tests/test_contract.py` runs the API contract's integration cases (`impl.*`) against the example app. CI runs them against the pinned `poli-page/api-contract` v1.3.0, and Dependabot proposes each new contract version.
+- Contract tests: `example-app/tests/test_contract.py` runs the integration cases (`impl.*`) of the Poli Page API contract v0.13.0 (`poli-page/api-contract`), including `impl.invalid-response`, against the example app. Dependabot proposes each new contract version.
 - Release workflow (`.github/workflows/release.yml`): a `vX.Y.Z` tag runs the test suite against the pinned API contract, publishes the wheel and sdist to PyPI through Trusted Publishing, and creates the GitHub Release. See `RELEASING.md`.
+- Release workflow: the version's major.minor must be the pinned API contract's (a stable contract tag on the pinned commit, not the comment next to it) and the required `poli-page` SDK's (`scripts/check_release_versions.py`); the error names both versions.
 
 ### Changed
+- Requires the `poli-page` SDK 0.13 (`poli-page>=0.13,<0.14`, from PyPI). With it, a 2xx from the API whose body is not JSON (usually from a proxy) raises `InvalidResponseError`, code `invalid_response` (a raw `json.JSONDecodeError` before), which the error handler answers `502`; the SDK's `render_to_file()` raises `io_error` when it cannot write its file (the `OSError` itself before), answered `500` with `"status": null`; and the PDF download is bounded by the `timeout` option (an idle timeout for `render.pdf_stream()`). `manage.py poli_page_render` exits `4` on `invalid_response`.
+- The live API CI job passes the optional `POLI_PAGE_BASE_URL` secret to the integration test (unset: the SDK default), next to the `pp_sandbox_` key in `POLI_PAGE_API_KEY`.
 - CI: the live API job runs on `main` (and on demand) against the production API with the sandbox key from the `POLI_PAGE_API_KEY` secret, and skips with a notice when the key is absent or not a `pp_sandbox_` key.
 - **Breaking:** API keys are per environment (`pp_sandbox_…`, `pp_live_…`, or `pp_{environment}_…` for an environment created on Pro+). `AppConfig.ready()` no longer raises `ImproperlyConfigured` on a key that does not start with `pp_test_` or `pp_live_`. A missing `POLI_PAGE` setting or an empty `API_KEY` still raises. Any other key that does not match `pp_{environment}_{32 lowercase hex}` now emits one warning, which shows no part of the key (not even its `pp_{environment}_` prefix), and the app starts anyway: the API decides whether the key is valid. When `API_KEY` is absent, the `POLI_PAGE_API_KEY` env var the SDK falls back to gets the same check.
 - **Breaking:** renders carry no template version. The API key's environment selects the published copy of the project. `manage.py poli_page_render` takes `--project` and `--template` and sends a `RenderInput` with no `version`.
 - **Breaking:** `preview_response` accepts only a `DocumentPreviewResult` (from `client.documents.preview(id)`).
 - The integration test runs only with a `pp_sandbox_…` key.
-- **Breaking:** requires the `poli-page` SDK 0.11.0 (`poli-page>=0.11.0,<2`, from PyPI), the first release with environment API keys and no template versions.
 - Example app: `GET /render/stream` hands the SDK stream to `pdf_stream_response`, so a render error answers the handler's JSON instead of a `200` PDF with an empty body.
 - Example app: renders send no `version`, and the error demo is `GET /errors/not-found`. It renders the template `does-not-exist` and lets the error reach the default error handler, which answers `404 TEMPLATE_NOT_FOUND` with the `to_payload()` body. The example project's own error middleware is removed.
 - CI installs the SDK from PyPI (no sdk-python checkout), builds and checks the example app, and runs each matrix leg's unit tests on that leg's Django version.
@@ -43,5 +42,5 @@ First release. The version matches the `poli-page` SDK 0.11.0 it requires.
 ### Fixed
 - `pdf_response` / `pdf_stream_response`: the `Content-Disposition` filename is now escaped per RFC 6266 / RFC 9110 (`\` and `"` as quoted-pairs, ASCII fallback included) and stripped of control characters (CR/LF, TAB, DEL, C1), so a filename can no longer break the header or inject parameters.
 
-[Unreleased]: https://github.com/poli-page/django/compare/v0.11.0...HEAD
-[0.11.0]: https://github.com/poli-page/django/releases/tag/v0.11.0
+[Unreleased]: https://github.com/poli-page/django/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/poli-page/django/releases/tag/v0.13.0

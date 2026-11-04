@@ -18,7 +18,7 @@
 
 - Python 3.11+
 - Django 4.2 LTS, 5.0, 5.1, 5.2 LTS, or 6.0
-- The `poli-page` Python SDK 0.11.0 or later (installed with the app, `poli-page>=0.11.0,<2`)
+- The `poli-page` Python SDK 0.13.x (installed with the app, `poli-page>=0.13,<0.14`)
 - A Poli Page API key (`pp_{environment}_…`, see [API keys](#api-keys))
 
 ## Install
@@ -27,7 +27,7 @@
 pip install django-poli-page
 ```
 
-This installs the `poli-page` SDK 0.11.0 or later with it.
+This installs the `poli-page` SDK 0.13.x with it.
 
 Add the app to `INSTALLED_APPS` and export your key:
 
@@ -134,7 +134,7 @@ When `ON_RETRY` or `ON_ERROR` is unset, the SDK hooks dispatch through Django si
 When the app starts, it appends `django_poli_page.middleware.PoliPageErrorMiddleware` to `MIDDLEWARE`. A `PoliPageError` that a view does not catch is answered as JSON:
 
 - the body is the SDK's `error.to_payload()`, exactly `{"code", "message", "status", "requestId"}`;
-- the HTTP status is that payload's `status`: the API's status for an API error, `503` for `network_error`, `504` for `timeout`, and `500` when the error has none (the body's `status` is then `null`);
+- the HTTP status is that payload's `status`: the API's status for an API error, `503` for `network_error`, `504` for `timeout`, `502` for `invalid_response` (a 2xx whose body is not JSON, usually from a proxy), and `500` when the error has none, as for `invalid_options` and `io_error` (the body's `status` is then `null`);
 - `Content-Type: application/json`.
 
 ```json
@@ -161,14 +161,14 @@ For a streamed PDF, hand the SDK stream to `pdf_stream_response` instead of open
 
 ### Error types
 
-The response helpers do not catch SDK exceptions. The four categories you can catch in a view are re-exported from `poli_page`:
+The response helpers do not catch SDK exceptions. Every SDK error is a `PoliPageError`, which carries `code`, `status`, `message`, and `request_id`; the main families you can catch in a view are exported from `poli_page`:
 
-- **Auth** — `AuthenticationError`. Invalid or revoked API key (HTTP 401/403).
-- **Rate limit** — `RateLimitError`. Your account or key is rate-limited (HTTP 429).
-- **Request rejected** — `BadRequestError` (and `InternalServerError` for upstream-side failures). The request was rejected at HTTP 4xx/5xx.
-- **Network / transport** — `APIConnectionError`. Network or transport failure before a response arrived.
+- **API status** — `APIStatusError` and its per-status subclasses, such as `BadRequestError` (400), `AuthenticationError` (401), `PermissionDeniedError` (403), `NotFoundError` (404), `RateLimitError` (429) and `InternalServerError` (5xx). The API answered with an error status.
+- **Network / transport** — `APIConnectionError`, and its subclass `APITimeoutError`. No answer arrived in time.
+- **Invalid response** — `InvalidResponseError`, code `invalid_response`. A 2xx whose body is not JSON, usually from a proxy or a captive portal; its `status` is that 2xx.
+- **Local and download** — a `PoliPageError` with code `invalid_options` (bad input or settings), `io_error` (`render_to_file()` could not write the file) or `DOWNLOAD_FAILED` (the PDF download from its presigned URL failed or timed out).
 
-All four inherit from `PoliPageError`, which carries `code`, `status`, `message`, and `request_id`. Catch one in the view when a route needs its own answer:
+Catch one in the view when a route needs its own answer:
 
 ```python
 # views.py
@@ -210,15 +210,15 @@ uv run python manage.py runserver
 
 ## Compatibility
 
-| Package version | Django | Python |
-|---|---|---|
-| 0.11.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS, 6.0 | 3.11, 3.12, 3.13 (Django 6.0: 3.12+) |
+| Package version | `poli-page` SDK | Django | Python |
+|---|---|---|---|
+| 0.13.x | 0.13.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS, 6.0 | 3.11, 3.12, 3.13 (Django 6.0: 3.12+) |
 
-The package follows the Django supported-versions policy; releases drop a Django row when upstream marks it end-of-life.
+The package shares its major.minor with the Poli Page API and requires the `poli-page` SDK of the same minor (see [RELEASING.md](RELEASING.md#versions)). It follows the Django supported-versions policy; releases drop a Django row when upstream marks it end-of-life.
 
 ## Contributing
 
-Run the checks CI runs from the repository root: `uv sync --all-extras`, then `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src tests example-app/tests` and `uv run pytest tests/unit`.
+Run the checks CI runs from the repository root: `uv sync --all-extras`, then `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src tests example-app/tests scripts` and `uv run pytest tests/unit`.
 
 ### Contract tests
 

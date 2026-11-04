@@ -135,3 +135,30 @@ def test_connection_error_exits_with_code_3(mocker: Any, tmp_path: Path) -> None
             f"--output={tmp_path / 'out.pdf'}",
         )
     assert exc_info.value.code == 3
+
+
+def test_invalid_response_exits_with_code_4(mocker: Any, tmp_path: Path) -> None:
+    # A 2xx whose body is not JSON (a proxy, a captive portal): not an API status error,
+    # not a connection error, so the generic code. The message names the code.
+    from poli_page import InvalidResponseError
+
+    err = InvalidResponseError(
+        "Invalid response: HTTP 200 body is not JSON",
+        code="invalid_response",
+        status=200,
+        request_id="req_proxy",
+    )
+    _stub_client(mocker, raise_exc=err)
+    stderr = io.StringIO()
+
+    with pytest.raises(SystemExit) as exc_info:
+        call_command(
+            "poli_page_render",
+            "--project=p",
+            "--template=t",
+            f"--output={tmp_path / 'out.pdf'}",
+            stderr=stderr,
+        )
+    assert exc_info.value.code == 4
+    assert "code=invalid_response" in stderr.getvalue()
+    assert not (tmp_path / "out.pdf").exists()
