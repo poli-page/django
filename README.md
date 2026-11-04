@@ -78,11 +78,13 @@ from django_poli_page.http import pdf_response
 
 
 def invoice_view(request, invoice_id):
-    pdf = client.render.pdf({
-        "project": "invoices",
-        "template": "default",
-        "data": {"invoice_id": invoice_id},
-    })
+    pdf = client.render.pdf(
+        {
+            "project": "invoices",
+            "template": "default",
+            "data": {"invoice_id": invoice_id},
+        }
+    )
     return pdf_response(pdf, f"invoice-{invoice_id}.pdf")
 ```
 
@@ -180,11 +182,13 @@ from django_poli_page.http import pdf_response
 
 def invoice_view(request, invoice_id):
     try:
-        pdf = client.render.pdf({
-            "project": "invoices",
-            "template": "default",
-            "data": {"invoice_id": invoice_id},
-        })
+        pdf = client.render.pdf(
+            {
+                "project": "invoices",
+                "template": "default",
+                "data": {"invoice_id": invoice_id},
+            }
+        )
     except NotFoundError:
         pdf = client.render.pdf({"project": "invoices", "template": "fallback", "data": {}})
     return pdf_response(pdf, f"invoice-{invoice_id}.pdf")
