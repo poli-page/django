@@ -43,3 +43,6 @@ bin/
 CLAUDE.md
 docs/plan/
 docs/spec/
+
+# Docs site
+docs/.astro/

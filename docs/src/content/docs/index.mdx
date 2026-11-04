@@ -1,0 +1,18 @@
+---
+title: Poli Page Django integration
+description: Render Poli Page documents from Django views with django-poli-page.
+template: splash
+hero:
+  tagline: Render Poli Page documents as Django HTTP responses.
+  actions:
+    - { text: Quick start, link: /django/getting-started/quick-start/, icon: rocket }
+    - { text: API reference, link: /django/reference/api/, icon: open-book }
+---
+
+import { CardGrid, Card } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <Card title="Quick start" icon="rocket">Add the app, set `POLI_PAGE` and return a PDF from a view.</Card>
+  <Card title="Concepts" icon="puzzle">The `POLI_PAGE` settings, the lazy `client`, PDF, streamed and preview responses.</Card>
+  <Card title="API reference" icon="open-book">Every public symbol of `django-poli-page`, on one page.</Card>
+</CardGrid>

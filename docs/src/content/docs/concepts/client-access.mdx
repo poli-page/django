@@ -1,0 +1,52 @@
+---
+title: Client access
+description: Reach the Poli Page SDK client from Django code through the lazy client singleton, and reset it in tests.
+---
+
+The integration binds one SDK client for the whole process: `django_poli_page.client`. Every helper, the management command and your views use it, so the settings you give `POLI_PAGE` apply everywhere.
+
+## The client singleton
+
+`client` is a `PoliPage` object from the `poli-page` SDK, wrapped in Django's `SimpleLazyObject`. Importing it costs nothing: the client is built from `POLI_PAGE` on the first attribute access, then reused. It is the SDK's own object, so `client.render` offers `pdf`, `pdf_stream` and `document`, and `client.documents` offers `get`, `preview`, `thumbnails` and `delete`.
+
+The client is synchronous and keeps an `httpx` connection pool. Reuse it, and do not build a second `PoliPage` in a view.
+
+## Rebuild after a settings change
+
+When `POLI_PAGE` changes through `override_settings` (the `setting_changed` signal), the app closes the built client. The next access to `client` builds a new one from the new settings, so a test can point the client at another `BASE_URL` or key.
+
+`django_poli_page._client.reset_client()` does the same by hand. It is a private module: prefer `override_settings`.
+
+## Use the client outside a view
+
+The client does not need a request. A Celery task, a management command or a signal receiver imports it the same way, and the SDK's `render_to_file(client, input, path)` from `poli_page.fs` writes a PDF to disk with it.
+
+## Example
+
+```python
+# invoices/tasks.py
+from pathlib import Path
+
+from poli_page.fs import render_to_file
+
+from django_poli_page import client
+
+
+def archive_invoice(invoice_number: str) -> Path:
+    path = Path("/var/invoices") / f"{invoice_number}.pdf"
+    render_to_file(
+        client,
+        {
+            "project": "billing",
+            "template": "invoice",
+            "data": {"invoiceNumber": invoice_number},
+        },
+        path,
+    )
+    return path
+```
+
+## See also
+- [Configuration](../configuration/)
+- [Responses](../responses/)
+- [Testing](../../production/testing/)

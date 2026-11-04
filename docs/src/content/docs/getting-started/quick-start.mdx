@@ -1,0 +1,42 @@
+---
+title: Quick start
+description: Return your first Poli Page PDF from a Django view with the client singleton and pdf_response.
+---
+
+This page takes you from a configured app to a PDF answered by a view. You render a template with the `client` singleton and wrap the bytes in `pdf_response`, which sets the PDF headers for you.
+
+## Add the app
+
+Add `django_poli_page` to `INSTALLED_APPS` and set `POLI_PAGE`, as [Install](../install/) shows.
+
+## Render from a view
+
+`from django_poli_page import client` gives you the SDK's `PoliPage` client, built on first use from `POLI_PAGE`. `client.render.pdf(...)` renders the template and returns the PDF as `bytes`.
+
+Hand the bytes to `pdf_response(pdf, filename)`. It returns an `HttpResponse` with `Content-Type: application/pdf` and a `Content-Disposition` built from the filename.
+
+The render needs a project and a template published to the environment of your key. Every organization has a `getting-started` project with a `welcome` template in `sandbox`, so `"project": "getting-started"`, `"template": "welcome"` and `"data": {"name": "World"}` work with a fresh `sandbox` key.
+
+## Example
+
+```python
+# views.py
+from django_poli_page import client
+from django_poli_page.http import pdf_response
+
+
+def invoice_view(request, invoice_id):
+    pdf = client.render.pdf({
+        "project": "billing",
+        "template": "invoice",
+        "data": {"invoiceNumber": invoice_id},
+    })
+    return pdf_response(pdf, f"invoice-{invoice_id}.pdf")
+```
+
+Route it with `path("invoices/<str:invoice_id>/", invoice_view)`. `GET /invoices/INV-001/` answers the PDF as `invoice-INV-001.pdf`.
+
+## See also
+- [Client access](../../concepts/client-access/)
+- [Responses](../../concepts/responses/)
+- [Errors](../../production/errors/)

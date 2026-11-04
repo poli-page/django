@@ -1,0 +1,54 @@
+---
+title: Observability
+description: Log and measure Poli Page retries and failures from Django with the poli_page_retry and poli_page_error signals.
+---
+
+The app bridges two SDK hooks onto Django signals: `poli_page_retry` fires before each retry, and `poli_page_error` fires when a request fails for good. Connect receivers to them to log, count or trace. They are the integration's observability hooks.
+
+## Signals
+
+Both signals live in `django_poli_page.signals`. The `sender` is the `django_poli_page.apps.PoliPageConfig` class, not an instance.
+
+- `poli_page_retry` is sent before each SDK retry sleep. Receivers get `event`, a `poli_page.RetryEvent` with `attempt` (the attempt about to be made, 2 for the first retry), `delay_ms` (the sleep before it) and `reason` (the `PoliPageError` that caused the retry).
+- `poli_page_error` is sent on terminal failure, when the retries are exhausted or the error is not retryable. Receivers get `error`, the `PoliPageError`.
+
+The SDK does not wait for a receiver, and a receiver cannot change the request.
+
+## Use your own callables
+
+`ON_RETRY` and `ON_ERROR` in `POLI_PAGE` take a dotted path to a callable. When one is set, your callable replaces the signal for that hook: it receives the `RetryEvent` or the `PoliPageError` directly, and the signal is not sent. See [Configuration](../../concepts/configuration/).
+
+The app does not expose the SDK's `on_request` and `on_response` hooks.
+
+## Request IDs
+
+`error.request_id` is the API's `x-request-id`. Log it: it is what Poli Page support asks for. The error handler also sends it as `requestId` in the JSON body of every error answer.
+
+## Example
+
+```python
+# invoices/signals.py
+import logging
+
+from django.dispatch import receiver
+
+from django_poli_page.signals import poli_page_error, poli_page_retry
+
+logger = logging.getLogger("poli_page")
+
+
+@receiver(poli_page_retry)
+def log_retry(sender, event, **kwargs):
+    logger.warning("retry %s in %sms: %s", event.attempt, event.delay_ms, event.reason.code)
+
+
+@receiver(poli_page_error)
+def log_error(sender, error, **kwargs):
+    logger.error("%s request_id=%s: %s", error.code, error.request_id or "-", error.message)
+```
+
+Import the module from an `AppConfig.ready()` so the receivers are connected at startup.
+
+## See also
+- [Configuration](../../concepts/configuration/)
+- [Errors](../errors/)

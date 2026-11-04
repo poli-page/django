@@ -1,0 +1,73 @@
+---
+title: Responses
+description: Answer PDFs, streamed PDFs, HTML previews and document redirects from Django views with the django_poli_page.http helpers.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `django_poli_page.http` module has four helpers: `pdf_response`, `pdf_stream_response`, `preview_response` and `document_redirect_response`. Each turns SDK output into a Django response with the right headers. None of them catches a `PoliPageError`: the error handler answers it (see [Errors](../../production/errors/)), or your view catches it.
+
+## PDF
+
+`pdf_response(pdf, filename="document.pdf", *, as_attachment=True)` wraps PDF bytes in an `HttpResponse`.
+
+| Argument | Default | Effect |
+| --- | --- | --- |
+| `filename` | `"document.pdf"` | The name in `Content-Disposition`. |
+| `as_attachment` | `True` | `True` answers `attachment` (the browser downloads the PDF). `False` answers `inline` (the browser shows it). |
+
+The response has `Content-Type: application/pdf`, `Content-Length`, `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`.
+
+The filename is written per RFC 6266. Control characters are removed, so a filename cannot split the header. An ASCII filename is a quoted `filename="…"`, with `\` and `"` escaped. A non-ASCII filename also gets a UTF-8 `filename*=UTF-8''…`, behind an ASCII `filename="…"` fallback where each non-ASCII character is `?`.
+
+## Streamed PDF
+
+`pdf_stream_response(chunks, filename="document.pdf", *, as_attachment=True)` returns a `StreamingHttpResponse` with the same headers, except `Content-Length`. Pass the SDK stream as is: `pdf_stream_response(client.render.pdf_stream(input))`.
+
+The render and the download start in the view, before the response exists. A `PoliPageError` therefore raises in the view and reaches the error handler, instead of a `200` PDF that has already started. Django closes the stream when it is done with the response. Any other iterable of `bytes` is streamed as you give it.
+
+<Aside type="caution">
+Do not open the stream inside a generator. An error raised once the body is streaming comes after the `200` is sent, and no handler can answer it.
+</Aside>
+
+## HTML preview
+
+`preview_response(preview)` takes the result of `client.documents.preview(id)` and returns its `html` as `text/html; charset=utf-8`, with `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`.
+
+## Redirect to a stored document
+
+`client.render.document(input)` stores the rendered document and returns its descriptor. `client.documents.get(id)` returns it again later, with `presigned_pdf_url`, a presigned URL valid for 15 minutes. `document_redirect_response(descriptor, *, permanent=False)` redirects to it: `302` by default, `301` with `permanent=True`. The response has `Cache-Control: private, no-store`.
+
+## Example
+
+```python
+# views.py
+from django_poli_page import client
+from django_poli_page.http import (
+    document_redirect_response,
+    pdf_stream_response,
+    preview_response,
+)
+
+
+def invoice_pdf(request, invoice_id):
+    stream = client.render.pdf_stream({
+        "project": "billing",
+        "template": "invoice",
+        "data": {"invoiceNumber": invoice_id},
+    })
+    return pdf_stream_response(stream, f"invoice-{invoice_id}.pdf", as_attachment=False)
+
+
+def document_preview(request, document_id):
+    return preview_response(client.documents.preview(document_id))
+
+
+def document_download(request, document_id):
+    return document_redirect_response(client.documents.get(document_id))
+```
+
+## See also
+- [Quick start](../../getting-started/quick-start/)
+- [Errors](../../production/errors/)
+- [API reference](../../reference/api/)

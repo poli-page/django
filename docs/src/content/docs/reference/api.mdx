@@ -1,0 +1,108 @@
+---
+title: API
+description: Every public symbol of django-poli-page, its signature and its behavior, on one page.
+---
+
+This page lists the public surface of `django-poli-page`: the package in [`src/django_poli_page/`](https://github.com/poli-page/django/tree/main/src/django_poli_page). The SDK methods behind `client.render` and `client.documents` are documented on the [Python SDK site](../sdk/).
+
+## client
+
+```python
+from django_poli_page import client
+
+client: PoliPage
+```
+
+A lazy `SimpleLazyObject` around the SDK's `PoliPage`, built from `POLI_PAGE` on first attribute access. See [Client access](../../concepts/client-access/).
+
+## POLI_PAGE
+
+The settings dict. Keys: `API_KEY`, `BASE_URL`, `TIMEOUT`, `RETRIES` (`MAX_ATTEMPTS`, `DELAY_SECONDS`), `ON_RETRY`, `ON_ERROR`, `HTTP_CLIENT`, `ERROR_HANDLER`. `PoliPageConfig.ready()` validates it and raises `ImproperlyConfigured` on a bad value. Ranges, defaults and messages are on [Configuration](../../concepts/configuration/).
+
+The messages, as the source words them:
+
+| Rule | Message |
+| --- | --- |
+| `POLI_PAGE` missing | `Set POLI_PAGE = {'API_KEY': 'pp_sandbox_...'} in your settings module. See https://docs.poli.page/integrations/django for the full schema.` |
+| `POLI_PAGE` not a dict | `POLI_PAGE must be a dict.` |
+| `API_KEY` empty or not a string | `POLI_PAGE['API_KEY'] must be a non-empty string.` |
+| `BASE_URL` scheme | `POLI_PAGE['BASE_URL'] must use http or https scheme. Got: …` |
+| `TIMEOUT` range | `POLI_PAGE['TIMEOUT'] must be > 0 and <= 600 seconds. Got: …` |
+| `MAX_ATTEMPTS` range | `POLI_PAGE['RETRIES']['MAX_ATTEMPTS'] must be between 0 and 10. Got: …` |
+| `DELAY_SECONDS` range | `POLI_PAGE['RETRIES']['DELAY_SECONDS'] must be between 0 and 30. Got: …` |
+| `ERROR_HANDLER` not a bool | `POLI_PAGE['ERROR_HANDLER'] must be True or False.` |
+
+## pdf_response
+
+```python
+def pdf_response(pdf: bytes, filename: str = "document.pdf", *, as_attachment: bool = True) -> HttpResponse
+```
+
+From `django_poli_page.http`. Answers `application/pdf` with `Content-Length`, `Content-Disposition`, `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`.
+
+## pdf_stream_response
+
+```python
+def pdf_stream_response(
+    chunks: AbstractContextManager[Iterator[bytes]] | Iterable[bytes],
+    filename: str = "document.pdf",
+    *,
+    as_attachment: bool = True,
+) -> StreamingHttpResponse
+```
+
+From `django_poli_page.http`. Enters an SDK stream at once and closes it when the response is done; any other iterable of bytes is streamed as given. It sets the same headers as `pdf_response`, without `Content-Length`.
+
+## preview_response
+
+```python
+def preview_response(preview: DocumentPreviewResult) -> HttpResponse
+```
+
+From `django_poli_page.http`. Answers the preview's `html` as `text/html; charset=utf-8`, with `Cache-Control: private, no-store` and `X-Content-Type-Options: nosniff`.
+
+## document_redirect_response
+
+```python
+def document_redirect_response(
+    descriptor: DocumentDescriptor, *, permanent: bool = False
+) -> HttpResponseRedirect | HttpResponsePermanentRedirect
+```
+
+From `django_poli_page.http`. Redirects to `descriptor.presigned_pdf_url`: `302`, or `301` with `permanent=True`. It sets `Cache-Control: private, no-store`.
+
+## PoliPageErrorMiddleware
+
+```python
+class PoliPageErrorMiddleware(MiddlewareMixin):
+    def process_exception(self, request: HttpRequest, exception: Exception) -> JsonResponse | None
+```
+
+From `django_poli_page.middleware`. Answers a `PoliPageError` with its `to_payload()` as JSON and returns `None` for any other exception. `MIDDLEWARE_PATH` is its dotted path, and `error_response(error)` builds the answer. See [Errors](../../production/errors/).
+
+## poli_page_retry and poli_page_error
+
+```python
+poli_page_retry: Signal  # receivers get sender, event: RetryEvent
+poli_page_error: Signal  # receivers get sender, error: PoliPageError
+```
+
+From `django_poli_page.signals`. See [Observability](../../production/observability/).
+
+## poli_page_render
+
+A management command: `python manage.py poli_page_render`.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `--project` | required | The project slug. |
+| `--template` | required | The template slug. |
+| `--data` | `{}` | Inline JSON object for the data payload. |
+| `--data-file` | none | Read the data from a file, or from stdin with `-`. |
+| `--output`, `-o` | `./poli-page-render.pdf` | The output file. |
+
+The command writes the PDF with the SDK's `render_to_file()`. A missing `--project` or `--template`, or data that is not a JSON object, ends with a `CommandError`. A `PoliPageError` prints its details to stderr and exits non-zero: 1 for a 4xx, 2 for a 5xx, 3 for `APIConnectionError` (which includes timeouts) and 4 for any other.
+
+## Re-exports
+
+`django_poli_page` exports `client` and `__version__`. The SDK types and errors (`PoliPageError`, `NotFoundError`, `RetryEvent`, …) are not re-exported: import them from `poli_page`.

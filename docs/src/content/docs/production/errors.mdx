@@ -1,0 +1,78 @@
+---
+title: Errors
+description: How a PoliPageError surfaces in Django, the JSON answer of the error handler, and how to handle errors yourself.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Every error the SDK raises is a `PoliPageError`. The app ships an error handler, on by default, that answers one raised by a view as JSON. You can catch the error in the view instead, or turn the handler off.
+
+## The error
+
+`PoliPageError` carries `code`, `status`, `message` and `request_id`. The families you can catch are exported from `poli_page`:
+
+- **API status:** `APIStatusError` and its per-status subclasses, such as `BadRequestError` (400), `AuthenticationError` (401), `PermissionDeniedError` (403), `NotFoundError` (404), `RateLimitError` (429) and `InternalServerError` (5xx). The API answered with an error status.
+- **Network and transport:** `APIConnectionError`, and its subclass `APITimeoutError`. No answer arrived in time.
+- **Invalid response:** `InvalidResponseError`, code `invalid_response`. A 2xx whose body is not JSON, usually from a proxy or a captive portal. Its `status` is that 2xx.
+- **Local and download:** a `PoliPageError` with code `invalid_options` (bad input or settings), `io_error` (`render_to_file()` could not write the file) or `DOWNLOAD_FAILED` (the PDF download from its presigned URL failed or timed out).
+
+## What the error handler answers
+
+When the app starts, it appends `django_poli_page.middleware.PoliPageErrorMiddleware` to `MIDDLEWARE`. A `PoliPageError` that a view does not catch is answered as JSON with `Content-Type: application/json`:
+
+- the body is the SDK's `error.to_payload()`, exactly `{"code", "message", "status", "requestId"}`;
+- the HTTP status is that payload's `status`.
+
+| Error | HTTP status |
+| --- | --- |
+| An API error | The API's status |
+| `network_error` | 503 |
+| `timeout` | 504 |
+| `invalid_response` | 502 |
+| No status, as for `invalid_options` and `io_error` | 500, with `status: null` in the body |
+
+Other exceptions go on to Django's own handling. The handler is the innermost middleware, so it answers before any other middleware's `process_exception`. It works for sync and async views.
+
+```json
+{
+  "code": "TEMPLATE_NOT_FOUND",
+  "message": "Template 'does-not-exist' not found in project 'getting-started'.",
+  "status": 404,
+  "requestId": "req_..."
+}
+```
+
+## Handle errors yourself
+
+Set `"ERROR_HANDLER": False` in `POLI_PAGE` to leave `MIDDLEWARE` untouched, or catch the error in the view. The app adds the middleware once, at startup: listing it yourself in `MIDDLEWARE` places it where you want it, and it is not added a second time.
+
+<Aside type="caution">
+A later replacement of `MIDDLEWARE`, such as `override_settings(MIDDLEWARE=[...])` or pytest-django's `settings.MIDDLEWARE = [...]` in a test, drops the handler unless the new list includes `"django_poli_page.middleware.PoliPageErrorMiddleware"`.
+</Aside>
+
+## Example
+
+```python
+# views.py
+from poli_page import NotFoundError
+
+from django_poli_page import client
+from django_poli_page.http import pdf_response
+
+
+def invoice_view(request, invoice_id):
+    try:
+        pdf = client.render.pdf({
+            "project": "billing",
+            "template": "invoice",
+            "data": {"invoiceNumber": invoice_id},
+        })
+    except NotFoundError:
+        pdf = client.render.pdf({"project": "billing", "template": "fallback", "data": {}})
+    return pdf_response(pdf, f"invoice-{invoice_id}.pdf")
+```
+
+## See also
+- [Configuration](../../concepts/configuration/)
+- [Responses](../../concepts/responses/)
+- [Testing](../testing/)
