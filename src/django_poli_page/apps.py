@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.signals import setting_changed
 
+from django_poli_page._retries import DEPRECATED_ALIAS, resolve_max_retries
 from django_poli_page.middleware import MIDDLEWARE_PATH
 
 # The SDK contract's full-key regex `^pp_{env}_{32 hex}$`, where {env} starts with
@@ -32,7 +33,7 @@ _KNOWN_KEYS = frozenset(
         "ERROR_HANDLER",
     }
 )
-_KNOWN_RETRY_KEYS = frozenset({"MAX_ATTEMPTS", "DELAY_SECONDS"})
+_KNOWN_RETRY_KEYS = frozenset({"MAX_RETRIES", "MAX_ATTEMPTS", "DELAY_SECONDS"})
 
 
 class PoliPageConfig(AppConfig):
@@ -97,15 +98,15 @@ class PoliPageConfig(AppConfig):
         if retries is not None:
             if not isinstance(retries, dict):
                 raise ImproperlyConfigured("POLI_PAGE['RETRIES'] must be a dict.")
-            max_attempts = retries.get("MAX_ATTEMPTS")
-            if max_attempts is not None:
-                if isinstance(max_attempts, bool) or not isinstance(max_attempts, int):
-                    raise ImproperlyConfigured("POLI_PAGE['RETRIES']['MAX_ATTEMPTS'] must be int.")
-                if not (0 <= max_attempts <= 10):
-                    raise ImproperlyConfigured(
-                        "POLI_PAGE['RETRIES']['MAX_ATTEMPTS'] must be between 0 and 10. "
-                        f"Got: {max_attempts!r}",
-                    )
+            resolve_max_retries(retries)
+            if DEPRECATED_ALIAS in retries:
+                warnings.warn(
+                    "POLI_PAGE['RETRIES']['MAX_ATTEMPTS'] is deprecated: it is the number of "
+                    "retries after the first attempt, not the number of attempts. "
+                    "Rename it to 'MAX_RETRIES' (same value).",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             delay = retries.get("DELAY_SECONDS")
             if delay is not None:
                 if isinstance(delay, bool) or not isinstance(delay, (int, float)):

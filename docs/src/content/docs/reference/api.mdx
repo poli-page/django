@@ -17,7 +17,7 @@ A lazy `SimpleLazyObject` around the SDK's `PoliPage`, built from `POLI_PAGE` on
 
 ## POLI_PAGE
 
-The settings dict. Keys: `API_KEY`, `BASE_URL`, `TIMEOUT`, `RETRIES` (`MAX_ATTEMPTS`, `DELAY_SECONDS`), `ON_RETRY`, `ON_ERROR`, `HTTP_CLIENT`, `ERROR_HANDLER`. `PoliPageConfig.ready()` validates it and raises `ImproperlyConfigured` on a bad value. Ranges, defaults and messages are on [Configuration](../../concepts/configuration/).
+The settings dict. Keys: `API_KEY`, `BASE_URL`, `TIMEOUT`, `RETRIES` (`MAX_RETRIES`, `DELAY_SECONDS`), `ON_RETRY`, `ON_ERROR`, `HTTP_CLIENT`, `ERROR_HANDLER`. `PoliPageConfig.ready()` validates it and raises `ImproperlyConfigured` on a bad value. Ranges, defaults and messages are on [Configuration](../../concepts/configuration/).
 
 The messages, as the source words them:
 
@@ -28,7 +28,7 @@ The messages, as the source words them:
 | `API_KEY` empty or not a string | `POLI_PAGE['API_KEY'] must be a non-empty string.` |
 | `BASE_URL` scheme | `POLI_PAGE['BASE_URL'] must use http or https scheme. Got: …` |
 | `TIMEOUT` range | `POLI_PAGE['TIMEOUT'] must be > 0 and <= 600 seconds. Got: …` |
-| `MAX_ATTEMPTS` range | `POLI_PAGE['RETRIES']['MAX_ATTEMPTS'] must be between 0 and 10. Got: …` |
+| `MAX_RETRIES` range | `POLI_PAGE['RETRIES']['MAX_RETRIES'] must be between 0 and 10. Got: …` |
 | `DELAY_SECONDS` range | `POLI_PAGE['RETRIES']['DELAY_SECONDS'] must be between 0 and 30. Got: …` |
 | `ERROR_HANDLER` not a bool | `POLI_PAGE['ERROR_HANDLER'] must be True or False.` |
 

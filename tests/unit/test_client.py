@@ -4,6 +4,7 @@ import importlib
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
 from django.test import override_settings
 
 from tests.keys import SANDBOX_KEY
@@ -35,7 +36,7 @@ def test_build_client_passes_all_options(mocker: Any) -> None:
             "API_KEY": SANDBOX_KEY,
             "BASE_URL": "https://api.example.com",
             "TIMEOUT": 42.0,
-            "RETRIES": {"MAX_ATTEMPTS": 5, "DELAY_SECONDS": 0.1},
+            "RETRIES": {"MAX_RETRIES": 5, "DELAY_SECONDS": 0.1},
         },
     ):
         _build_client()
@@ -46,6 +47,18 @@ def test_build_client_passes_all_options(mocker: Any) -> None:
     assert kwargs["timeout"] == 42.0
     assert kwargs["max_retries"] == 5
     assert kwargs["retry_delay"] == 0.1
+
+
+@pytest.mark.parametrize("key", ["MAX_RETRIES", "MAX_ATTEMPTS"])
+def test_build_client_maps_retry_budget_to_sdk_max_retries(mocker: Any, key: str) -> None:
+    fake_polipage_cls = mocker.patch("django_poli_page._client.PoliPage")
+    from django_poli_page._client import _build_client
+
+    with override_settings(POLI_PAGE={"API_KEY": SANDBOX_KEY, "RETRIES": {key: 0}}):
+        _build_client()
+
+    _, kwargs = fake_polipage_cls.call_args
+    assert kwargs["max_retries"] == 0
 
 
 def test_lazy_client_is_not_built_at_import(mocker: Any) -> None:
