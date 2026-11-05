@@ -1,0 +1,68 @@
+---
+title: Configuration
+description: Configure django-poli-page with the POLI_PAGE settings dict, its defaults, ranges and startup validation.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+You configure everything through one `POLI_PAGE` dict in your settings module. `AppConfig.ready()` validates it when Django starts, so a wrong value stops the project at startup and shows up in `manage.py check`.
+
+## Options
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `API_KEY` | `POLI_PAGE_API_KEY` env var | Your Poli Page key, a non-empty string. |
+| `BASE_URL` | `POLI_PAGE_BASE_URL` env var, then `https://api.poli.page` | The API host. It must use `http` or `https`. |
+| `TIMEOUT` | SDK default, 60 | Per-request timeout in seconds, greater than 0 and at most 600. |
+| `RETRIES.MAX_ATTEMPTS` | SDK default, 2 | The retry budget for transient failures, an integer from 0 to 10. It is passed to the SDK as `max_retries`. |
+| `RETRIES.DELAY_SECONDS` | SDK default, 0.5 | The base delay between retries in seconds, from 0 to 30. |
+| `ON_RETRY` | signal dispatch | Dotted path to a callable `(RetryEvent) -> None`. |
+| `ON_ERROR` | signal dispatch | Dotted path to a callable `(PoliPageError) -> None`. |
+| `HTTP_CLIENT` | SDK default | Dotted path to a factory that returns an `httpx.Client`. |
+| `ERROR_HANDLER` | `True` | Install the error handler middleware. `False` leaves `MIDDLEWARE` untouched. |
+
+A key that does not match `pp_{environment}_{32 lowercase hex}` raises one startup warning, which shows no part of the key, and the app starts anyway: the API decides whether the key is valid. When `API_KEY` is absent, the same check applies to the `POLI_PAGE_API_KEY` environment variable, which the SDK then uses.
+
+## Validation
+
+An invalid value raises `ImproperlyConfigured` at startup:
+
+- `POLI_PAGE` missing, or not a dict.
+- `API_KEY` present but not a non-empty string.
+- `BASE_URL` not a string, or with a scheme other than `http` or `https`.
+- `TIMEOUT` not a number (a `bool` is refused), or outside `(0, 600]`.
+- `RETRIES` not a dict, `MAX_ATTEMPTS` not an `int` or outside `[0, 10]`, `DELAY_SECONDS` not a number or outside `[0, 30]`.
+- `ERROR_HANDLER` not a `bool`.
+
+An unknown key in `POLI_PAGE`, or in `RETRIES`, raises a warning and nothing else.
+
+## Base URL
+
+The app passes `BASE_URL` to the SDK client only when you set it. When it is unset, the SDK reads the `POLI_PAGE_BASE_URL` environment variable, then falls back to `https://api.poli.page`. The synchronous client, which `client` is, and the SDK's async client resolve it the same way.
+
+## Hooks and the HTTP client
+
+When `ON_RETRY` or `ON_ERROR` is unset, the SDK hook sends a Django signal instead (see [Observability](../../production/observability/)). Setting the key replaces the signal: your callable runs and the signal is not sent.
+
+`HTTP_CLIENT` is imported with `import_string` and called once, with no arguments, when the client is built. Use it to tune the connection pool or to instrument `httpx`.
+
+<Aside type="caution">
+The client is built on first use, not at startup. A bad `ON_RETRY`, `ON_ERROR` or `HTTP_CLIENT` dotted path therefore fails on the first access to `client`, not in `manage.py check`.
+</Aside>
+
+## Example
+
+```python
+# settings.py
+import os
+
+POLI_PAGE = {
+    "API_KEY": os.environ["POLI_PAGE_API_KEY"],
+    "TIMEOUT": 30,
+    "RETRIES": {"MAX_ATTEMPTS": 3, "DELAY_SECONDS": 0.5},
+}
+```
+
+## See also
+- [Client access](../client-access/)
+- [API reference](../../reference/api/)

@@ -1,0 +1,72 @@
+---
+title: Testing
+description: Test Django views that render Poli Page documents without calling the API, with a fake client and a faked SDK error.
+---
+
+Your views reach the API through one object, `django_poli_page.client`. In tests you replace the name your view module imported with a fake, so the view, the response helpers and the error handler run without a network call.
+
+## Replace the client
+
+Patch `client` where your view uses it: `mock.patch("shop.views.client")` for `from django_poli_page import client` in `shop/views.py`. The fake needs only the methods your view calls, such as `render.pdf`.
+
+Keep a valid `POLI_PAGE` in your test settings, such as `pp_sandbox_` followed by 32 zeros: any other non-empty string starts too, but logs a format warning. The fake never sends it.
+
+## Fake an error
+
+Make a fake method raise an SDK error, built as `NotFoundError(message, code=..., status=..., request_id=...)`. The error handler answers it as in production, so you can assert the JSON body and the status.
+
+## Settings overrides
+
+`override_settings(POLI_PAGE=...)` rebuilds the real client on its next use, to point it at a local `BASE_URL`. Replacing `MIDDLEWARE` in a test drops the error handler unless the new list includes it (see [Errors](../errors/)).
+
+## Example
+
+```python
+# shop/tests/test_views.py
+from unittest import mock
+
+import pytest
+from django.test import Client
+from poli_page import NotFoundError
+
+
+@pytest.mark.urls("shop.urls")
+def test_invoice_pdf() -> None:
+    with mock.patch("shop.views.client") as fake:
+        fake.render.pdf.return_value = b"%PDF-1.7"
+        response = Client().get("/invoices/INV-001/")
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "application/pdf"
+    assert response["Content-Disposition"] == 'attachment; filename="invoice-INV-001.pdf"'
+    fake.render.pdf.assert_called_once_with({
+        "project": "billing",
+        "template": "invoice",
+        "data": {"invoiceNumber": "INV-001"},
+    })
+
+
+@pytest.mark.urls("shop.urls")
+def test_missing_template_is_a_404_json() -> None:
+    error = NotFoundError(
+        "Template 'invoice' not found in project 'billing'.",
+        code="TEMPLATE_NOT_FOUND",
+        status=404,
+        request_id="req_123",
+    )
+    with mock.patch("shop.views.client") as fake:
+        fake.render.pdf.side_effect = error
+        response = Client().get("/invoices/INV-001/")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "code": "TEMPLATE_NOT_FOUND",
+        "message": "Template 'invoice' not found in project 'billing'.",
+        "status": 404,
+        "requestId": "req_123",
+    }
+```
+
+## See also
+- [Client access](../../concepts/client-access/)
+- [Errors](../errors/)

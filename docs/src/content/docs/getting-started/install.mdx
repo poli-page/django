@@ -1,0 +1,73 @@
+---
+title: Install
+description: Install django-poli-page, set your API key and add the app to INSTALLED_APPS with a POLI_PAGE settings dict.
+---
+
+The Django integration ships as `django-poli-page` on PyPI. It wraps the Python SDK, `poli-page`, in a reusable Django app: you install one package, which brings the SDK with it, and add the app to `INSTALLED_APPS`.
+
+## Requirements
+
+- Python 3.11 or later
+- Django 4.2 LTS, 5.0, 5.1, 5.2 LTS or 6.0
+- The `poli-page` Python SDK 0.13.x, installed with the app (`poli-page>=0.13,<0.14`)
+- A Poli Page API key, from [app.poli.page](https://app.poli.page) under **Settings → API Keys**
+
+CI tests Python 3.11, 3.12 and 3.13 against each of those Django versions. Django 4.2 is not tested on Python 3.13, and Django 6.0 is not tested on Python 3.11, because upstream does not support those pairs.
+
+## Install the package
+
+```bash
+pip install django-poli-page
+```
+
+## Set your API key
+
+Put the key in the environment your project reads:
+
+```bash
+export POLI_PAGE_API_KEY=pp_sandbox_your_key_here
+```
+
+A key is `pp_{environment}_{32 lowercase hex}`, where `{environment}` is the environment it belongs to. The key alone selects the environment, so a render never names a version:
+
+| Environment | Key | Watermark | Counted |
+| --- | --- | --- | --- |
+| `sandbox` (every org) | `pp_sandbox_…` | yes | no |
+| `live` (every org, deletable on Pro+) | `pp_live_…` | no | yes |
+| created on Pro+ (e.g. `staging`) | `pp_staging_…` | no | yes |
+
+"Counted" means the render counts toward the organization's monthly PDF quota.
+
+## Add the app
+
+Add `django_poli_page` to `INSTALLED_APPS` and declare the `POLI_PAGE` dict. When the app starts, it validates the dict and, unless you turn it off, adds its error handler to `MIDDLEWARE`. A missing or invalid `POLI_PAGE` stops the project at startup, so `manage.py check` fails with the reason.
+
+Smoke-test the wiring from the command line. The `getting-started` project with the `welcome` template exists in the `sandbox` environment of every organization:
+
+```bash
+python manage.py poli_page_render \
+    --project=getting-started \
+    --template=welcome \
+    --data='{"name":"World"}' \
+    --output=welcome.pdf
+```
+
+## Example
+
+```python
+# settings.py
+import os
+
+INSTALLED_APPS = [
+    # ...
+    "django_poli_page",
+]
+
+POLI_PAGE = {
+    "API_KEY": os.environ["POLI_PAGE_API_KEY"],
+}
+```
+
+## See also
+- [Quick start](../quick-start/)
+- [Configuration](../../concepts/configuration/)
