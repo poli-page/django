@@ -4,6 +4,15 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 
 ## [Unreleased]
 
+### Added
+- `POLI_PAGE['RETRIES']['MAX_RETRIES']`: the number of retries after the first attempt (0 to 10), passed to the SDK as `max_retries`.
+
+### Deprecated
+- `POLI_PAGE['RETRIES']['MAX_ATTEMPTS']` is renamed `MAX_RETRIES`. It never counted attempts: it was the SDK's `max_retries`, so `MAX_ATTEMPTS = 3` made up to 4 attempts. The old key keeps its meaning and still works, with a `DeprecationWarning`; setting both to different values raises `ImproperlyConfigured`.
+
+### Fixed
+- `tox.ini` now covers Django 6.0 (Python 3.12 and 3.13), as the CI matrix does.
+
 ## [0.13.0] - 2026-11-04
 
 First release on PyPI. It requires the `poli-page` SDK 0.13 and passes the Poli Page API contract v0.13.0. The package shares its major.minor with the Poli Page API, so its first version is 0.13.0; a 0.11.0 was prepared and never published. The Changed, Removed and Fixed entries below describe changes made during that line.

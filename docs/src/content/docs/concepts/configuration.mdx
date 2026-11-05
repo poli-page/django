@@ -14,7 +14,7 @@ You configure everything through one `POLI_PAGE` dict in your settings module. `
 | `API_KEY` | `POLI_PAGE_API_KEY` env var | Your Poli Page key, a non-empty string. |
 | `BASE_URL` | `POLI_PAGE_BASE_URL` env var, then `https://api.poli.page` | The API host. It must use `http` or `https`. |
 | `TIMEOUT` | SDK default, 60 | Per-request timeout in seconds, greater than 0 and at most 600. |
-| `RETRIES.MAX_ATTEMPTS` | SDK default, 2 | The retry budget for transient failures, an integer from 0 to 10. It is passed to the SDK as `max_retries`. |
+| `RETRIES.MAX_RETRIES` | SDK default, 2 | The number of retries after the first attempt, an integer from 0 to 10: a call makes at most `MAX_RETRIES + 1` attempts. It is passed to the SDK as `max_retries`. `RETRIES.MAX_ATTEMPTS` is the deprecated former name, with the same meaning. |
 | `RETRIES.DELAY_SECONDS` | SDK default, 0.5 | The base delay between retries in seconds, from 0 to 30. |
 | `ON_RETRY` | signal dispatch | Dotted path to a callable `(RetryEvent) -> None`. |
 | `ON_ERROR` | signal dispatch | Dotted path to a callable `(PoliPageError) -> None`. |
@@ -31,10 +31,10 @@ An invalid value raises `ImproperlyConfigured` at startup:
 - `API_KEY` present but not a non-empty string.
 - `BASE_URL` not a string, or with a scheme other than `http` or `https`.
 - `TIMEOUT` not a number (a `bool` is refused), or outside `(0, 600]`.
-- `RETRIES` not a dict, `MAX_ATTEMPTS` not an `int` or outside `[0, 10]`, `DELAY_SECONDS` not a number or outside `[0, 30]`.
+- `RETRIES` not a dict, `MAX_RETRIES` (or the deprecated `MAX_ATTEMPTS`) not an `int` or outside `[0, 10]`, or both set to different values, `DELAY_SECONDS` not a number or outside `[0, 30]`.
 - `ERROR_HANDLER` not a `bool`.
 
-An unknown key in `POLI_PAGE`, or in `RETRIES`, raises a warning and nothing else.
+An unknown key in `POLI_PAGE`, or in `RETRIES`, raises a warning and nothing else. `RETRIES.MAX_ATTEMPTS` raises a `DeprecationWarning`: rename it to `MAX_RETRIES`, same value.
 
 ## Base URL
 
@@ -59,7 +59,7 @@ import os
 POLI_PAGE = {
     "API_KEY": os.environ["POLI_PAGE_API_KEY"],
     "TIMEOUT": 30,
-    "RETRIES": {"MAX_ATTEMPTS": 3, "DELAY_SECONDS": 0.5},
+    "RETRIES": {"MAX_RETRIES": 3, "DELAY_SECONDS": 0.5},
 }
 ```
 

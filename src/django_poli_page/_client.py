@@ -8,6 +8,7 @@ from django.utils.functional import SimpleLazyObject, empty
 from django.utils.module_loading import import_string
 from poli_page import PoliPage
 
+from django_poli_page._retries import resolve_max_retries
 from django_poli_page.conf import get_config
 
 
@@ -28,9 +29,9 @@ def _build_client() -> PoliPage:
         kwargs["timeout"] = timeout
 
     retries = cfg.get("RETRIES") or {}
-    max_attempts = retries.get("MAX_ATTEMPTS")
-    if max_attempts is not None:
-        kwargs["max_retries"] = max_attempts
+    max_retries = resolve_max_retries(retries)
+    if max_retries is not None:
+        kwargs["max_retries"] = max_retries
     delay = retries.get("DELAY_SECONDS")
     if delay is not None:
         kwargs["retry_delay"] = delay

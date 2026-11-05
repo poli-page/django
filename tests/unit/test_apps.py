@@ -224,10 +224,43 @@ def test_timeout_out_of_range_raises(bad_timeout: float | int) -> None:
         _run_ready()
 
 
-def test_retries_max_attempts_out_of_range_raises() -> None:
+@pytest.mark.parametrize("key", ["MAX_RETRIES", "MAX_ATTEMPTS"])
+def test_retries_max_retries_out_of_range_raises(key: str) -> None:
     with (
-        override_settings(POLI_PAGE={"API_KEY": SANDBOX_KEY, "RETRIES": {"MAX_ATTEMPTS": 11}}),
-        pytest.raises(ImproperlyConfigured, match="MAX_ATTEMPTS"),
+        override_settings(POLI_PAGE={"API_KEY": SANDBOX_KEY, "RETRIES": {key: 11}}),
+        pytest.raises(ImproperlyConfigured, match=key),
+    ):
+        _run_ready()
+
+
+def test_retries_max_retries_does_not_warn() -> None:
+    with (
+        override_settings(POLI_PAGE={"API_KEY": SANDBOX_KEY, "RETRIES": {"MAX_RETRIES": 3}}),
+        warnings.catch_warnings(),
+    ):
+        warnings.simplefilter("error")
+        _run_ready()
+
+
+def test_retries_max_attempts_alias_warns_deprecated() -> None:
+    with (
+        override_settings(POLI_PAGE={"API_KEY": SANDBOX_KEY, "RETRIES": {"MAX_ATTEMPTS": 3}}),
+        warnings.catch_warnings(record=True) as captured,
+    ):
+        warnings.simplefilter("always")
+        _run_ready()
+    assert any(
+        issubclass(w.category, DeprecationWarning) and "MAX_RETRIES" in str(w.message)
+        for w in captured
+    )
+
+
+def test_retries_max_retries_and_alias_disagreeing_raises() -> None:
+    with (
+        override_settings(
+            POLI_PAGE={"API_KEY": SANDBOX_KEY, "RETRIES": {"MAX_RETRIES": 1, "MAX_ATTEMPTS": 3}},
+        ),
+        pytest.raises(ImproperlyConfigured, match="both"),
     ):
         _run_ready()
 

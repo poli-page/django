@@ -112,7 +112,7 @@ You configure everything through a single `POLI_PAGE` dict in your settings modu
 | `API_KEY` | `POLI_PAGE_API_KEY` env var | Your Poli Page key, a non-empty string. A key that does not match `pp_{environment}_{32 lowercase hex characters}` raises one startup warning, which shows no part of the key, and the app starts anyway: the API decides whether the key is valid. When `API_KEY` is absent, the same check applies to the `POLI_PAGE_API_KEY` env var. |
 | `BASE_URL` | SDK default | Override the API host. |
 | `TIMEOUT` | SDK default | Per-request timeout in seconds (0 < value <= 600). |
-| `RETRIES.MAX_ATTEMPTS` | SDK default | Retry budget for transient failures (0-10). |
+| `RETRIES.MAX_RETRIES` | SDK default | Retries after the first attempt (0-10), so a call makes at most `MAX_RETRIES + 1` attempts. `MAX_ATTEMPTS` is the deprecated former name, same meaning. |
 | `RETRIES.DELAY_SECONDS` | SDK default | Base delay between retry attempts (0-30). |
 | `ON_RETRY` | signal dispatch | Dotted path to a callable `(RetryEvent) -> None`. |
 | `ON_ERROR` | signal dispatch | Dotted path to a callable `(PoliPageError) -> None`. |
@@ -124,7 +124,7 @@ You configure everything through a single `POLI_PAGE` dict in your settings modu
 POLI_PAGE = {
     "API_KEY": os.environ["POLI_PAGE_API_KEY"],
     "TIMEOUT": 30,
-    "RETRIES": {"MAX_ATTEMPTS": 3, "DELAY_SECONDS": 0.5},
+    "RETRIES": {"MAX_RETRIES": 3, "DELAY_SECONDS": 0.5},
 }
 ```
 
