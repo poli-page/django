@@ -4,6 +4,8 @@ All notable changes to `django-poli-page` are documented here. Format follows [K
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-05
+
 ### Added
 - `POLI_PAGE['RETRIES']['MAX_RETRIES']`: the number of retries after the first attempt (0 to 10), passed to the SDK as `max_retries`.
 
@@ -52,5 +54,6 @@ First release on PyPI. It requires the `poli-page` SDK 0.13 and passes the Poli 
 ### Fixed
 - `pdf_response` / `pdf_stream_response`: the `Content-Disposition` filename is now escaped per RFC 6266 / RFC 9110 (`\` and `"` as quoted-pairs, ASCII fallback included) and stripped of control characters (CR/LF, TAB, DEL, C1), so a filename can no longer break the header or inject parameters.
 
-[Unreleased]: https://github.com/poli-page/django/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/poli-page/django/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/poli-page/django/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/poli-page/django/releases/tag/v0.13.0
