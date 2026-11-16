@@ -36,7 +36,7 @@ from django.conf import settings
 from django.test import Client, override_settings
 from mock_api import ContractError, MockServer, RecordedRequest, substitute
 
-KNOWN_FORMAT_VERSION = 1
+KNOWN_FORMAT_VERSION = 2
 
 #: The app's key in every case: a well-formed sandbox key (`pp_sandbox_` + 32 hex).
 TEST_API_KEY = "pp_sandbox_0123456789abcdef0123456789abcdef"
