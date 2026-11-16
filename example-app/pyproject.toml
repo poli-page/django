@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "django>=5.0",
     "django-poli-page",
-    "poli-page>=0.13,<0.14",
+    "poli-page>=0.15,<0.16",
 ]
 
 [tool.uv.sources]
