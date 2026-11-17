@@ -33,7 +33,7 @@
 
 - Python 3.11+
 - Django 4.2 LTS, 5.0, 5.1, 5.2 LTS, or 6.0
-- The `poli-page` Python SDK 0.13.x (installed with the app, `poli-page>=0.13,<0.14`)
+- The `poli-page` Python SDK 0.15.x (installed with the app, `poli-page>=0.15,<0.16`)
 - A Poli Page API key (`pp_{environment}_…`, see [API keys](#api-keys))
 
 ## Install
@@ -42,7 +42,7 @@
 pip install django-poli-page
 ```
 
-This installs the `poli-page` SDK 0.13.x with it.
+This installs the `poli-page` SDK 0.15.x with it.
 
 Add the app to `INSTALLED_APPS` and export your key:
 
@@ -231,6 +231,7 @@ uv run python manage.py runserver
 
 | Package version | `poli-page` SDK | Django | Python |
 |---|---|---|---|
+| 0.15.x | 0.15.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS, 6.0 | 3.11, 3.12, 3.13 (Django 6.0: 3.12+) |
 | 0.13.x | 0.13.x | 4.2 LTS, 5.0, 5.1, 5.2 LTS, 6.0 | 3.11, 3.12, 3.13 (Django 6.0: 3.12+) |
 
 The package shares its major.minor with the Poli Page API and requires the `poli-page` SDK of the same minor (see [RELEASING.md](RELEASING.md#versions)). It follows the Django supported-versions policy; releases drop a Django row when upstream marks it end-of-life.

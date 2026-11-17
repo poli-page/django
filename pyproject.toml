@@ -31,7 +31,7 @@ classifiers = [
 ]
 dependencies = [
     "django>=4.2",
-    "poli-page>=0.13,<0.14",
+    "poli-page>=0.15,<0.16",
 ]
 
 [project.optional-dependencies]

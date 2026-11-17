@@ -4,7 +4,7 @@ The package is published to PyPI as [`django-poli-page`](https://pypi.org/projec
 
 ## Versions
 
-`django-poli-page` shares its major.minor with the Poli Page API: package `0.13.x` talks to API `0.13`, passes the [API contract](https://github.com/poli-page/api-contract) `v0.13.0`, and requires the `poli-page` SDK of the same minor (`poli-page>=0.13,<0.14` in `pyproject.toml`, which under PEP 440 admits every 0.13 release and no 0.14 prerelease). Patch numbers are free: a fix to the package alone is a patch, whatever the API's or the SDK's patch. A change of the API contract, a new feature, and a raise of the minimum Python or Django version are each a minor. The package may skip minors when it has nothing to ship for one. The Release workflow refuses a version whose major.minor differs from the contract version pinned in `.github/workflows/ci.yml` or from the `poli-page` requirement in `pyproject.toml` and `example-app/pyproject.toml`.
+`django-poli-page` shares its major.minor with the Poli Page API: package `0.15.x` talks to API `0.15`, passes the [API contract](https://github.com/poli-page/api-contract) `v0.15.0`, and requires the `poli-page` SDK of the same minor (`poli-page>=0.15,<0.16` in `pyproject.toml`, which under PEP 440 admits every 0.15 release and no 0.16 prerelease). Patch numbers are free: a fix to the package alone is a patch, whatever the API's or the SDK's patch. A change of the API contract, a new feature, and a raise of the minimum Python or Django version are each a minor. The package may skip minors when it has nothing to ship for one. The Release workflow refuses a version whose major.minor differs from the contract version pinned in `.github/workflows/ci.yml` or from the `poli-page` requirement in `pyproject.toml` and `example-app/pyproject.toml`.
 
 ## What the workflow does
 
@@ -14,7 +14,7 @@ On a pushed `vX.Y.Z` tag:
    - the tag version equals `__version__` in `src/django_poli_page/_version.py`;
    - `CHANGELOG.md` has a `## [X.Y.Z]` section;
    - `scripts/check_release_versions.py X.Y.Z`: the API contract commit pinned in `.github/workflows/ci.yml` (and the same commit in `release.yml`) must carry a stable tag `vX.Y.Z` of the version's major.minor (the `# vX.Y.Z` comment next to the pin is not trusted), and `pyproject.toml` and `example-app/pyproject.toml` must require `poli-page>=X.Y,<X.(Y+1)` of that major.minor. The error names both versions;
-   - lint (`ruff check`), format (`ruff format --check`), type check (`mypy`), unit tests, and the example app's contract tests, against the pinned API contract (`poli-page/api-contract` `v0.13.0`, `POLI_CONTRACT`);
+   - lint (`ruff check`), format (`ruff format --check`), type check (`mypy`), unit tests, and the example app's contract tests, against the pinned API contract (`poli-page/api-contract` `v0.15.0`, `POLI_CONTRACT`);
    - builds the wheel and sdist, runs `twine check --strict`, and fails if the package holds anything but the library (`src/django_poli_page/`, README, CHANGELOG, LICENSE, `pyproject.toml`): no tests, no example app.
 2. **publish** (environment `pypi-publish`, `id-token: write`): uploads the verified wheel and sdist to PyPI with `pypa/gh-action-pypi-publish`, with PEP 740 attestations.
 3. **github-release** (`contents: write`): creates the GitHub Release for the tag with the CHANGELOG section as notes and the wheel and sdist attached.
